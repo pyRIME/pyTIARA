@@ -261,12 +261,12 @@ def fill_shadows(p: np.ndarray, t: np.ndarray, sigma_px: float = MEAN_SIGMA_PX) 
 
 
 def interior_from_positioning(recon_dir, shape) -> dict | None:
-    """The specimen marked by hand in pyPrep's positioning dialog (pyprep_recon.json "positioning") as interior
+    """The specimen marked by hand in the positioning dialog (pytiara_recon.json "positioning") as interior
     surfaces of the working WBP ([Y, Z, X]; no OFFSET or SHIFT, XAXISTILT 0): centre (nz - 1) / 2 - SHIFT z, sloped
     by tan(OFFSET) in X and tan(XAXISTILT) in Y (the dialog's convention), the marked specimen thickness. None when
     the series was not positioned by hand."""
     try:
-        pos = json.loads((Path(recon_dir) / "pyprep_recon.json").read_text(encoding="utf-8")).get("positioning")
+        pos = json.loads(legacy.recon_record(recon_dir).read_text(encoding="utf-8")).get("positioning")
     except (OSError, ValueError):
         return None
     if not isinstance(pos, dict) or not pos.get("specimen_px"):

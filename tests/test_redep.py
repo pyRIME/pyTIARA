@@ -34,7 +34,7 @@ def test_astra_status_is_reported():
 
 
 def test_excluded_views_are_read_from_tilt_com(tmp_path):
-    from pyprep.positioning import TiltCom
+    from pytiara.positioning import TiltCom
     (tmp_path / "tilt.com").write_text("$tilt -StandardInput\nTHICKNESS 300\nEXCLUDELIST 1-3,7\nEXCLUDELIST2 10\n")
     assert redep.excluded_views(TiltCom.read(tmp_path / "tilt.com")) == {1, 2, 3, 7, 10}
     (tmp_path / "tilt.com").write_text("$tilt -StandardInput\nTHICKNESS 300\n")
@@ -46,12 +46,12 @@ def test_interior_from_the_positioning_dialog(tmp_path):
     assert redep.interior_from_positioning(tmp_path, (40, 200, 60)) is None          # no record
     rec = {"positioning": {"tilt_com": {"OFFSET": [0.0, 0.0], "XAXISTILT": 0.0, "SHIFT": [0.0, -10.0],
                                         "THICKNESS": 140}, "margin_nm": 20.0, "specimen_px": 100}}
-    (tmp_path / "pyprep_recon.json").write_text(json.dumps(rec))
+    (tmp_path / "pyprep_recon.json").write_text(json.dumps(rec))                    # a pyPrep-era record
     lam = redep.interior_from_positioning(tmp_path, (40, 200, 60))
     assert lam["z_top"].shape == (40, 60)
     assert np.allclose(lam["z_top"], 59.5) and np.allclose(lam["z_bot"], 159.5)     # centre 99.5 + 10
     rec["positioning"]["tilt_com"]["XAXISTILT"] = 5.0                                 # surfaces rise along Y
-    (tmp_path / "pyprep_recon.json").write_text(json.dumps(rec))
+    (tmp_path / "pytiara_recon.json").write_text(json.dumps(rec))                   # the current name wins
     lam = redep.interior_from_positioning(tmp_path, (40, 200, 60))
     slope = (lam["z_top"][-1, 0] - lam["z_top"][0, 0]) / 39
     assert abs(slope - np.tan(np.radians(5.0))) < 1e-4
