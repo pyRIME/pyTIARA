@@ -33,6 +33,53 @@ def test_astra_status_is_reported():
     assert isinstance(ok, bool) and msg
 
 
+def test_excluded_views_are_read_from_tilt_com(tmp_path):
+    from pyprep.positioning import TiltCom
+    (tmp_path / "tilt.com").write_text("$tilt -StandardInput\nTHICKNESS 300\nEXCLUDELIST 1-3,7\nEXCLUDELIST2 10\n")
+    assert redep.excluded_views(TiltCom.read(tmp_path / "tilt.com")) == {1, 2, 3, 7, 10}
+    (tmp_path / "tilt.com").write_text("$tilt -StandardInput\nTHICKNESS 300\n")
+    assert redep.excluded_views(TiltCom.read(tmp_path / "tilt.com")) == set()
+
+
+def test_interior_from_the_positioning_dialog(tmp_path):
+    import json
+    assert redep.interior_from_positioning(tmp_path, (40, 200, 60)) is None          # no record
+    rec = {"positioning": {"tilt_com": {"OFFSET": [0.0, 0.0], "XAXISTILT": 0.0, "SHIFT": [0.0, -10.0],
+                                        "THICKNESS": 140}, "margin_nm": 20.0, "specimen_px": 100}}
+    (tmp_path / "pyprep_recon.json").write_text(json.dumps(rec))
+    lam = redep.interior_from_positioning(tmp_path, (40, 200, 60))
+    assert lam["z_top"].shape == (40, 60)
+    assert np.allclose(lam["z_top"], 59.5) and np.allclose(lam["z_bot"], 159.5)     # centre 99.5 + 10
+    rec["positioning"]["tilt_com"]["XAXISTILT"] = 5.0                                 # surfaces rise along Y
+    (tmp_path / "pyprep_recon.json").write_text(json.dumps(rec))
+    lam = redep.interior_from_positioning(tmp_path, (40, 200, 60))
+    slope = (lam["z_top"][-1, 0] - lam["z_top"][0, 0]) / 39
+    assert abs(slope - np.tan(np.radians(5.0))) < 1e-4
+
+
+def test_all_depths_masks_grains_at_several_depths():
+    rng = np.random.default_rng(3)
+    wbp = rng.standard_normal((64, 120, 64)).astype(np.float32)         # [Y, Z, X]
+    z_top, z_bot = np.full((64, 64), 60.0, np.float32), np.full((64, 64), 90.0, np.float32)
+    wbp[10:20, 45:51, 10:20] -= 8.0                                      # a grain 10-15 px beyond the top surface
+    wbp[40:50, 25:31, 40:50] -= 8.0                                      # another 30-35 px beyond it
+    ys = xs = slice(4, 60)
+    ext = {"upper": 40, "lower": 10}
+    one, _ = redep.wbp_layer_masks(wbp, z_top, z_bot, ext, 1.0, 1.0, 1.0, ys, xs)
+    every, _ = redep.wbp_layer_masks(wbp, z_top, z_bot, ext, 1.0, 1.0, 1.0, ys, xs, all_depths=True)
+    assert every[15, 47, 15] and every[45, 27, 45]                       # both grains
+    assert not (one[15, 47, 15] and one[45, 27, 45])                     # one layer: one depth band
+    assert not every[30, 75, 30]                                         # nothing inside the interior
+
+
+def test_interior_from_a_range_runs_against_the_working_z(tmp_path):
+    (tmp_path / "tilt.com").write_text("$tilt -StandardInput\nTHICKNESS 300\nSHIFT 0.0 -10.0\nXAXISTILT 0.0\n")
+    lam = redep.interior_from_range(tmp_path, (40, 200, 60), -50.0, 30.0, 2.0)    # 2 px per nm
+    # centre at 99.5 + 10 = 109.5; +30 nm in the tomogram's sections = -60 px in the working Z
+    assert np.allclose(lam["z_top"], 49.5) and np.allclose(lam["z_bot"], 209.5)
+    assert lam["thickness_vox_median"] == 160.0
+
+
 OPTION = r'''
 import sys
 from PySide6.QtWidgets import QApplication
