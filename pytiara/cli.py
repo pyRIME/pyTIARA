@@ -238,7 +238,10 @@ def cmd_redep(args) -> int:
         print(f"No aligned stack <root>_ali.mrc in {recon_dir}; give --root")
         return 1
     try:
-        r = redep.remove_redeposition(recon_dir, root, print)
+        r = redep.remove_redeposition(recon_dir, root, print,
+                                      interior="range" if args.interior_nm else args.interior,
+                                      interior_nm=tuple(args.interior_nm) if args.interior_nm else None,
+                                      all_depths=args.all_depths)
     except RuntimeError as e:
         print(f"Redeposition removal failed: {e}")
         return 1
@@ -375,6 +378,16 @@ def main(argv=None) -> int:
     p = sub.add_parser("redep", help="remove redeposition in an existing reconstruction folder (needs ASTRA)")
     p.add_argument("recon_dir", help="the series' reconstruction folder (imod_bin4)")
     p.add_argument("--root", help="root name of the etomo project (default: from its .edf)")
+    p.add_argument("--interior", choices=("auto", "locator", "positioning"), default="auto",
+                   help="lamella interior: the locator, falling back to the specimen marked in the positioning "
+                        "dialog (auto, default); the locator only; or the marked specimen (everything beyond its "
+                        "lines is removable)")
+    p.add_argument("--interior-nm", nargs=2, type=float, metavar=("LOW", "HIGH"),
+                   help="lamella interior given directly: its bounds in nm from the centre of the positioned "
+                        "tomogram along its section axis (higher = higher Z in 3dmod); overrides --interior")
+    p.add_argument("--all-depths", action="store_true",
+                   help="mask dense grains at every depth beyond the interior (up to 250 nm), not one layer per "
+                        "surface: for an interior you set, when grains lie at several depths or are sparse")
     p.set_defaults(func=cmd_redep)
 
     args = ap.parse_args(argv)

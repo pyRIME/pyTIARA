@@ -12,7 +12,8 @@ the interior at 50-400 nm and changes nothing below about 12 nm (even/odd FSC un
   3. Grain masks: per surface, the grain footprint segmented in the flattened WBP slab at that depth (histogram
      valley, else dense cores), extruded over the layer's apparent depth. Only material outside the interior can
      be removed.
-  4. Pass 1: SIRT (ASTRA, GPU) of q = -ln(p / view mean), constrained to the slab (interior plus the layers).
+  4. Pass 1: SIRT (ASTRA, GPU) of q = -ln(p / view mean), constrained to the slab (interior plus the layers). Views
+     that tilt.com excludes (EXCLUDELIST) are left out of the model; they are still cleaned in step 6.
   5. Contamination c = low-passed pass-1 density inside the grain masks; its projections A c give each view's
      transmission T = exp(-A c).
   6. Cleaned stack p + (1 - T) m, with m the local grain-free mean: the grains' shadow is filled with what the rays
@@ -212,11 +213,13 @@ def layer_stats(vol, zref, r, ys, xs, nm, sig_px, ez) -> dict:
             "morphology": _classify(cov, largest, seg["rule"])}
 
 
-def wbp_layer_masks(wbp, z_top, z_bot, ext_vox, nm, sig_px, ez, ys, xs) -> tuple[np.ndarray, dict]:
+def wbp_layer_masks(wbp, z_top, z_bot, ext_vox, nm, sig_px, ez, ys, xs,
+                    all_depths: bool = False) -> tuple[np.ndarray, dict]:
     """3D masks of the dense layers, per surface: the grain footprint segmented (full field) in the flattened 9-slice
     WBP slab where the cross-section is widest (bimodal 'valley' slabs preferred, else the darkest core slab),
     extruded over the layer's apparent depth extent (centre +- apparent thickness / 2, which includes the
-    missing-wedge elongation)."""
+    missing-wedge elongation). ``all_depths``: the union of the footprints segmented at every depth beyond the
+    surface instead (each over its own 3 slices), for grains at several depths or too sparse for one layer."""
     ny, nz, nx = wbp.shape
     zz = np.arange(nz, dtype=np.float32)[None, :, None]
     mask = np.zeros((ny, nz, nx), bool)
@@ -231,6 +234,13 @@ def wbp_layer_masks(wbp, z_top, z_bot, ext_vox, nm, sig_px, ez, ys, xs) -> tuple
             scan.append((r, info["rule"], float(m[ys, xs].mean()), m))
         if not scan:
             rep[name] = {"rule": "none (layer outside the volume)"}
+            continue
+        if all_depths:
+            for r, _, _, m in scan:
+                zc = zref + sign * r
+                mask |= m[:, None, :] & (zz >= (zc - 1.5)[:, None, :]) & (zz < (zc + 1.5)[:, None, :])
+            rep[name] = {"rule": "all depths", "depths_nm": [scan[0][0] / nm, scan[-1][0] / nm],
+                         "coverage_per_depth_max": max(s[2] for s in scan)}
             continue
         valley = [s for s in scan if s[1] == "valley"]
         r_w, rule, cov, foot = max(valley or scan, key=lambda s: s[2])
@@ -248,6 +258,53 @@ def fill_shadows(p: np.ndarray, t: np.ndarray, sigma_px: float = MEAN_SIGMA_PX) 
     """Cleaned view p + (1 - T) m: the deficit left by the dense material (transmission T) filled with the local
     grain-free mean m (the view divided by T, low-passed). Noise-neutral, unlike dividing by T."""
     return p + (1.0 - t) * ndimage.gaussian_filter(p / np.maximum(t, 1e-6), sigma_px)
+
+
+def interior_from_positioning(recon_dir, shape) -> dict | None:
+    """The specimen marked by hand in the positioning dialog (pytiara_recon.json "positioning") as interior
+    surfaces of the working WBP ([Y, Z, X]; no OFFSET or SHIFT, XAXISTILT 0): centre (nz - 1) / 2 - SHIFT z, sloped
+    by tan(OFFSET) in X and tan(XAXISTILT) in Y (the dialog's convention), the marked specimen thickness. None when
+    the series was not positioned by hand."""
+    try:
+        pos = json.loads(legacy.recon_record(recon_dir).read_text(encoding="utf-8")).get("positioning")
+    except (OSError, ValueError):
+        return None
+    if not isinstance(pos, dict) or not pos.get("specimen_px"):
+        return None
+    g = pos["tilt_com"]
+    ny, nz, nx = shape
+    a, b = np.radians(float(g["OFFSET"][0])), np.radians(float(g["XAXISTILT"]))
+    gy, gx = np.mgrid[0:ny, 0:nx].astype(np.float32)
+    zc = (nz - 1) / 2 - float(g["SHIFT"][1]) + np.tan(a) * (gx - (nx - 1) / 2) + np.tan(b) * (gy - (ny - 1) / 2)
+    half = float(pos["specimen_px"]) / (2 * np.cos(a) * np.cos(b))
+    return {"z_top": zc - half, "z_bot": zc + half, "thickness_vox_median": 2 * half, "global_round": "hand"}
+
+
+def interior_from_range(recon_dir, shape, lo_nm: float, hi_nm: float, nm: float) -> dict:
+    """Interior between lo_nm and hi_nm: nm from the centre of the positioned tomogram along its section (Z) axis
+    (higher = higher section numbers in 3dmod), in tilt.com's current geometry. trimvol -rx runs that axis against
+    the working WBP's Z, hence the sign; the surfaces are sloped like the positioning (OFFSET, XAXISTILT)."""
+    tc = TiltCom.read(Path(recon_dir) / "tilt.com")
+    a, b = np.radians(tc.floats("OFFSET", 2)[0]), np.radians(tc.floats("XAXISTILT", 1)[0])
+    ny, nz, nx = shape
+    gy, gx = np.mgrid[0:ny, 0:nx].astype(np.float32)
+    zc = (nz - 1) / 2 - tc.floats("SHIFT", 2)[1] + np.tan(a) * (gx - (nx - 1) / 2) + np.tan(b) * (gy - (ny - 1) / 2)
+    lo, hi = sorted((lo_nm, hi_nm))
+    return {"z_top": zc - hi * nm, "z_bot": zc - lo * nm, "thickness_vox_median": (hi - lo) * nm,
+            "global_round": "range"}
+
+
+def excluded_views(tc: TiltCom) -> set[int]:
+    """Views (numbered from 1) that tilt.com leaves out of the reconstruction (EXCLUDELIST, EXCLUDELIST2)."""
+    out = set()
+    for key in ("EXCLUDELIST", "EXCLUDELIST2"):
+        for part in (tc.get(key) or "").replace(" ", "").split(","):
+            if "-" in part:
+                a, b = part.split("-", 1)
+                out.update(range(int(a), int(b) + 1))
+            elif part:
+                out.add(int(part))
+    return out
 
 
 def _check_cancel(cancel: threading.Event | None) -> None:
@@ -295,9 +352,15 @@ def rebuild_tomogram(recon_dir, root: str, log: Callable[[str], None] = print,
 def remove_redeposition(recon_dir, root: str, log: Callable[[str], None] = print,
                         cancel: threading.Event | None = None, iterations: int = ITERATIONS,
                         margin_nm: float = MARGIN_NM, mean_sigma_px: float = MEAN_SIGMA_PX,
-                        thickness_nm: float = WORK_THICKNESS_NM) -> dict:
+                        thickness_nm: float = WORK_THICKNESS_NM, interior: str = "auto",
+                        interior_nm: tuple[float, float] | None = None, all_depths: bool = False) -> dict:
     """Clean the aligned stack of a reconstruction folder and rebuild its tomogram (module docstring); returns the
-    record. Raises RuntimeError when ASTRA is unusable or no lamella interior is found."""
+    record. ``interior``: "auto" (the lamella locator, else the specimen marked by hand in the positioning dialog),
+    "locator", "positioning" (always the hand-marked specimen: everything beyond its lines can be removed), or
+    "range" (``interior_nm``: its bounds in nm from the positioned tomogram's centre, see interior_from_range).
+    ``all_depths``: model and mask dense grains at every depth up to SEARCH_NM beyond both surfaces, not just one
+    layer per surface (for an interior you set yourself: everything beyond it is removable).
+    Raises RuntimeError when ASTRA is unusable or no lamella interior is found."""
     ok, msg = astra_status()
     if not ok:
         raise RuntimeError(msg)
@@ -305,6 +368,8 @@ def remove_redeposition(recon_dir, root: str, log: Callable[[str], None] = print
     recon_dir = Path(recon_dir)
     ali = recon_dir / f"{root}_ali.mrc"
     angles = np.array([float(a) for a in (recon_dir / f"{root}.tlt").read_text().split()])
+    excluded = excluded_views(TiltCom.read(recon_dir / "tilt.com"))
+    keep = np.array([i + 1 not in excluded for i in range(len(angles))])     # views in the model
     h = mrc.read_header(ali)
     apix = float(h.pixel_size or 1.0)
     nm = 10.0 / apix
@@ -323,14 +388,30 @@ def remove_redeposition(recon_dir, root: str, log: Callable[[str], None] = print
     p = mrc.read_mrc(ali).astype(np.float32)                           # [views, Y, X]
     view_mean = p.mean(axis=(1, 2), keepdims=True)
     q = np.ascontiguousarray(np.transpose(-np.log(np.clip(p, 1e-3, None) / view_mean), (1, 0, 2)))  # [Y, views, X]
-    cal = calibrate(wbp, q, angles, ny // 2 - 16)
+    cal = calibrate(wbp, q[:, keep], angles[keep], ny // 2 - 16)
     ang = np.deg2rad(cal["angle_sign"] * angles)
     flip = cal["flip_z"]
     log(f"Projection geometry: angle sign {cal['angle_sign']:+d}, Z flip {flip} (correlation {cal['corr']:.3f})")
-    try:
-        lam = lamella.find_interior(wbp, apix)
-    except RuntimeError as e:
-        raise RuntimeError(f"no lamella interior found ({e})") from None
+    if excluded:
+        log(f"Views excluded in tilt.com ({', '.join(map(str, sorted(excluded)))}): left out of the model, "
+            f"cleaned like the others")
+    lam, why = None, "interior from the positioning requested"
+    if interior == "range":
+        lam = interior_from_range(recon_dir, wbp.shape, interior_nm[0], interior_nm[1], nm)
+        log(f"Interior: {min(interior_nm):+.0f} to {max(interior_nm):+.0f} nm from the tomogram's centre (given)")
+    elif interior in ("auto", "locator"):
+        try:
+            lam = lamella.find_interior(wbp, apix)
+        except RuntimeError as e:
+            why = str(e)
+            if interior == "locator":
+                raise RuntimeError(f"no lamella interior found ({e})") from None
+    if lam is None:
+        lam = interior_from_positioning(recon_dir, wbp.shape)
+        if lam is None:
+            raise RuntimeError(f"no lamella interior found ({why}), and the series was not positioned by hand")
+        log(f"Interior: the specimen marked in the positioning dialog ({lam['thickness_vox_median'] / nm:.0f} nm)"
+            + ("" if interior == "positioning" else f"; the locator found none ({why[:120]})"))
     z_top, z_bot = lam["z_top"], lam["z_bot"]
     thick = lam["thickness_vox_median"]
     ys, xs = slice(int(0.08 * ny), int(0.92 * ny)), slice(int(0.08 * nx), int(0.92 * nx))
@@ -343,6 +424,8 @@ def remove_redeposition(recon_dir, root: str, log: Callable[[str], None] = print
         st = layer_stats(wbp, zref, r_wide, ys, xs, nm, sig_px, ez)
         e = (max(abs(r_wide), abs(det["r_vox"])) / nm + st["apparent_thickness_nm"] / 2 + margin_nm) \
             if det["significant"] else margin_nm
+        if all_depths:
+            e = max(e, SEARCH_NM)
         ext[w] = {"extent_nm": e, "significant": det["significant"], "dark_ratio": det["dip_sigma"],
                   "widest_nm": abs(r_wide) / nm, "darkest_nm": abs(det["r_vox"]) / nm,
                   "apparent_thickness_nm": st["apparent_thickness_nm"], "coverage_wbp": st["coverage"],
@@ -353,7 +436,10 @@ def remove_redeposition(recon_dir, root: str, log: Callable[[str], None] = print
     zz = np.arange(nz, dtype=np.float32)[None, :, None]
     lo = (z_top - ext["upper"]["extent_nm"] * nm)[:, None, :]
     hi = (z_bot + ext["lower"]["extent_nm"] * nm)[:, None, :]
-    seg, masks = wbp_layer_masks(wbp, z_top, z_bot, {w: ext[w]["extent_nm"] * nm for w in ext}, nm, sig_px, ez, ys, xs)
+    seg, masks = wbp_layer_masks(wbp, z_top, z_bot, {w: ext[w]["extent_nm"] * nm for w in ext}, nm, sig_px, ez, ys, xs,
+                                 all_depths=all_depths)
+    if all_depths:
+        log(f"Dense grains masked at every depth up to {SEARCH_NM:.0f} nm beyond both surfaces")
     del wbp
     _check_cancel(cancel)
 
@@ -362,7 +448,7 @@ def remove_redeposition(recon_dir, root: str, log: Callable[[str], None] = print
     for y0 in range(0, ny, CHUNK):
         y1 = min(ny, y0 + CHUNK)
         slab = (zz >= lo[y0:y1]) & (zz <= hi[y0:y1])
-        x = sirt(q[y0:y1], slab[:, ::-1, :] if flip else slab, ang, iterations)
+        x = sirt(q[y0:y1][:, keep], slab[:, ::-1, :] if flip else slab, ang[keep], iterations)
         x1[y0:y1] = x[:, ::-1, :] if flip else x
         _check_cancel(cancel)
     log(f"SIRT ({iterations} iterations) constrained to the interior and its layers: done")
@@ -403,7 +489,9 @@ def remove_redeposition(recon_dir, root: str, log: Callable[[str], None] = print
             "locator_round": lam.get("global_round"), "layers": ext, "masks": masks, "coverage": coverage,
             "contamination_projection": projection, "calibration": cal,
             "parameters": {"iterations": iterations, "margin_nm": margin_nm, "mean_sigma_px": mean_sigma_px,
-                           "work_thickness_nm": thickness_nm},
+                           "work_thickness_nm": thickness_nm, "excluded_views": sorted(excluded),
+                           "interior": interior, "interior_nm": list(interior_nm) if interior_nm else None,
+                           "all_depths": all_depths},
             "seconds": round(time.perf_counter() - t0, 1)}
 
 
