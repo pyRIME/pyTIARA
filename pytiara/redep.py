@@ -197,6 +197,9 @@ def layer_stats(vol, zref, r, ys, xs, nm, sig_px, ez) -> dict:
     frac = []
     for rz in rr:
         img = lamella.flat_slab(vol, zref, rz, half=0)[ys, xs]
+        if not np.isfinite(img).any():          # this depth is outside the volume
+            frac.append(0.0)
+            continue
         img = np.where(np.isfinite(img), img, np.nanmedian(img))
         lp = ndimage.gaussian_filter(img, sig_px)
         frac.append(float((lp[mask] < seg["threshold"]).mean()) if mask.any() else 0.0)
