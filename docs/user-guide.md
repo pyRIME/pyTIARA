@@ -1,9 +1,9 @@
 # User guide
 
-This guide walks through a typical session in the pyPrep app. Everything the
+This guide walks through a typical session in the pyTIARA app. Everything the
 app does can also be run from the [command line](command-line.md).
 
-- [What pyPrep needs](#what-pyprep-needs)
+- [What pyTIARA needs](#what-pytiara-needs)
 - [The window](#the-window)
 - [Tilt series](#tilt-series-page)
 - [Frame alignment](#frame-alignment-page)
@@ -16,9 +16,9 @@ app does can also be run from the [command line](command-line.md).
 - [Continuing in etomo](#continuing-in-etomo)
 - [Tips](#tips)
 
-## What pyPrep needs
+## What pyTIARA needs
 
-For each tilt series, pyPrep needs:
+For each tilt series, pyTIARA needs:
 
 1. **An `.mdoc` file** written by the microscope software during collection —
    Thermo Fisher **Tomo5** or **SerialEM**. It supplies the tilt angles, the
@@ -76,7 +76,7 @@ them.
 
 ### Quality control
 
-pyPrep flags tilts that would degrade a reconstruction:
+pyTIARA flags tilts that would degrade a reconstruction:
 
 | Flag | Meaning | Checked |
 |---|---|---|
@@ -87,13 +87,13 @@ pyPrep flags tilts that would degrade a reconstruction:
 | `not converged` | frame alignment hit the iteration limit — informational | after processing |
 
 The expected intensity follows the specimen thickness along the beam, which
-grows as 1/cos(tilt); pyPrep fits this (allowing for a tilted specimen) and
+grows as 1/cos(tilt); pyTIARA fits this (allowing for a tilted specimen) and
 flags tilts more than ~15 % below it. Flagged tilts are *not* removed
 automatically — **Exclude flagged tilts** unticks the `dark`, `drift` and
 `low score` ones. The Results page plots the intensity of every tilt against
 the fitted curve.
 
-pyPrep also reports **saturation**: Tomo5 can save 8-bit fraction files, which
+pyTIARA also reports **saturation**: Tomo5 can save 8-bit fraction files, which
 clip any pixel that receives more than ~8 electrons in one fraction. If more
 than 0.5 % of pixels are at 255, the QC column shows `sat x%` and the log
 explains. The counts lost cannot be recovered; save fractions as 16-bit, or use
@@ -115,7 +115,7 @@ EER data to check the gain reference.
 | EER grouping | 10 fractions | EER files hold hundreds of detector frames per tilt. They are summed into this many *fractions* before alignment (or choose *EER frames per fraction*). Each fraction should have enough dose to align, roughly 0.2–0.5 e/Å². No frames are dropped. |
 | EER rendering | Physical pixels (4K) | *2x super-resolution (8K)* uses the EER sub-pixel positions; frames are aligned at 8K and Fourier-binned back to the physical pixel size (less aliasing, ~4x slower). Output pixel sizes are unchanged. |
 | Gain reference | none | Needed for **EER** (Falcon frames are not gain-corrected): use the `.gain` file EPU writes. **Not needed for Tomo5 K3 fractions**, which are already gain-normalized. MRC and TIFF references are also accepted; DigitalMicrograph `.dm4` must first be converted with IMOD's `dm2mrc`. |
-| Gain handling | Auto, rotate 0°, no flip | *Auto* divides by `.gain` files / for EER movies and multiplies otherwise. If the reference is in a different orientation from the frames, set the rotation/flip (pyPrep reports a size mismatch, and suggests a rotation when the reference looks transposed). |
+| Gain handling | Auto, rotate 0°, no flip | *Auto* divides by `.gain` files / for EER movies and multiplies otherwise. If the reference is in a different orientation from the frames, set the rotation/flip (pyTIARA reports a size mismatch, and suggests a rotation when the reference looks transposed). |
 | Image orientation | Automatic | Tomography 5 stores images upside down (IMOD reports its stacks as "inverted in Y"); used as stored, the tomograms are mirror images. *Automatic* inverts the aligned images of Tomo5 series in Y and mirrors the recorded tilt axis with them, so the stacks, the CTF and the tomograms follow IMOD's conventions and have the specimen's hand. *Invert in Y* / *As stored* force it either way. See *Handedness* on the Reconstruction page. |
 
 ### Alignment
@@ -127,11 +127,11 @@ EER data to check the gain reference.
 | Max shift | 80 px | Largest shift searched, in full-resolution (physical) pixels. |
 | Max iterations / Tolerance | 10 / 0.1 px | Refinement stops when no shift changes by more than the tolerance. |
 | Group frames | 1 | Sum this many consecutive frames before aligning (for very noisy movies); per-frame shifts are interpolated. |
-| Ignore detector fixed-pattern noise | on | Camera row/column offsets are identical in every frame and pull all shifts to zero; pyPrep ignores the Fourier axes where they live. Leave on. |
+| Ignore detector fixed-pattern noise | on | Camera row/column offsets are identical in every frame and pull all shifts to zero; pyTIARA ignores the Fourier axes where they live. Leave on. |
 
 ### CTF estimation
 
-pyPrep measures the defocus of every tilt on the GPU, from the tilt's aligned
+pyTIARA measures the defocus of every tilt on the GPU, from the tilt's aligned
 sum, while the series is processed. This adds about 15 s per series. The fit
 takes into account that tilted images are not at one defocus. It also finds:
 
@@ -168,7 +168,7 @@ are written as `<series>.defocus` for IMOD and shown on the Results page.
 **Presets and settings files**: a *preset* stores the settings of all pages
 under a name — for example one per microscope and camera. Pick a preset and
 press *Apply*, or *Save as preset…* to store the current settings (presets live
-in `%APPDATA%\pyPrep\presets`). *Save settings* writes the same thing to a
+in `%APPDATA%\pyTIARA\presets`). *Save settings* writes the same thing to a
 JSON file you can share or give to the command line (`--settings`).
 
 ## Reconstruction page
@@ -176,7 +176,7 @@ JSON file you can share or give to the command line (`--settings`).
 ![Reconstruction page](images/reconstruction.png)
 
 With **Reconstruct each series with IMOD batchruntomo** ticked (the default),
-pyPrep runs IMOD's batchruntomo on each series after frame alignment. The line
+pyTIARA runs IMOD's batchruntomo on each series after frame alignment. The line
 at the top shows whether IMOD was found.
 
 **Alignment preset**
@@ -191,7 +191,7 @@ at the top shows whether IMOD was found.
 
 | Setting | Default | Notes |
 |---|---|---|
-| Stack binning | bin 4 | Which pyPrep stack is reconstructed (written automatically even if not ticked on the Outputs page). |
+| Stack binning | bin 4 | Which pyTIARA stack is reconstructed (written automatically even if not ticked on the Outputs page). |
 | Stack | Aligned sum | or the dose-weighted sum. |
 | Positioning | Automatic | IMOD cryo-positioning finds the specimen slab and sets thickness and pitch. Sparse specimens (isolated particles, thin films) can defeat it; the *Fallback thickness* is then used and a warning is logged. *Fixed thickness* skips positioning. |
 | Positioning thickness | 330 nm | Thickness of the trial tomogram used for positioning. |
@@ -208,19 +208,19 @@ together give the specimen's hand by default:
 
 - *Image orientation* (Frame alignment page). A tomogram has the hand of the
   images it is built from. Tomography 5 stores its images upside down, so with
-  *Automatic* pyPrep inverts them in Y. The Results page then shows *images
+  *Automatic* pyTIARA inverts them in Y. The Results page then shows *images
   inverted in Y (Tomography 5)*.
 - *Handedness* (this page) sets the direction of the tilt axis. CTF estimation
   measures the direction of the defocus gradient. If it disagrees with the
   recorded tilt axis in at least 80 % of the tilts beyond 20°, the recorded
-  axis is 180° off. With *Automatic*, pyPrep then reconstructs with the axis
+  axis is 180° off. With *Automatic*, pyTIARA then reconstructs with the axis
   rotated by 180°. The stacks' `.mrc.mdoc` files get the corrected tilt axis
   too, so an etomo project you set up by hand agrees. The Results page shows
   *tilt axis rotated 180° by the CTF check* when this applies. With correctly
   oriented images, the recorded axis normally passes.
 
 The defocus gradient cannot tell a 180° axis error from images stored
-mirrored: both look like an inverted gradient. Earlier pyPrep versions
+mirrored: both look like an inverted gradient. Earlier pyTIARA versions
 therefore rotated the axis of Tomo5 data. The gradient then agreed, but the
 tomograms were mirror images. This was found with 70S ribosomes in *C.
 difficile* lamellae (template matching and subtomogram averaging; see *How it
@@ -235,7 +235,7 @@ the next run.
 
 | Setting | Default | Notes |
 |---|---|---|
-| Correct the CTF | on | IMOD ctfphaseflip phase-flips the aligned stack with pyPrep's per-tilt defocus. At bin 4 with ~2–3 µm defocus the first CTF zero is near Nyquist, so it changes little. It matters for bin 1–2 tomograms. |
+| Correct the CTF | on | IMOD ctfphaseflip phase-flips the aligned stack with pyTIARA's per-tilt defocus. At bin 4 with ~2–3 µm defocus the first CTF zero is near Nyquist, so it changes little. It matters for bin 1–2 tomograms. |
 | Also write a deconvolved tomogram | on | `<series>_rec_deconv.mrc`: a Wiener-like filter with the CTF. It gives stronger low-resolution contrast and less noise, for viewing, picking and segmentation. The normal tomogram is kept. About 10 s on the GPU. |
 | Deconvolution strength | 1.0 | Higher = stronger contrast boost. |
 | SNR falloff | 1.0 | Higher = smoother result. |
@@ -250,9 +250,9 @@ correction is skipped.
 |---|---|---|
 | Also write a tomogram with the redeposition removed | off | `<series>_rec_redep.mrc`: the dense surface layers of a FIB lamella (redeposition, Pt/GIS grains) are taken out of the tilt series by SIRT constrained to the lamella, then the tomogram is rebuilt. Their shading and blotches leave the interior; fine detail is unchanged. The normal tomogram is kept. A few minutes on the GPU and about 10 GB of memory at bin 4. |
 
-The option is greyed out until the ASTRA Toolbox is installed in pyPrep's
+The option is greyed out until the ASTRA Toolbox is installed in pyTIARA's
 environment with a CUDA GPU (the line under it says what is missing; see
-[Installation](installation.md#optional-redeposition-removal)). Restart pyPrep after
+[Installation](installation.md#optional-redeposition-removal)). Restart pyTIARA after
 installing it. When the lamella interior cannot be found (for example a field
 without cells), the step is skipped and the log says why.
 
@@ -265,7 +265,7 @@ names are listed in `IMOD\com\directives.csv`.
 
 1. Tick the series to process on the Tilt series page (**Check all** /
    **Uncheck all**).
-2. Press **Start** (bottom left). pyPrep first estimates the disk space the
+2. Press **Start** (bottom left). pyTIARA first estimates the disk space the
    batch needs and warns if the output drive is too full. The app switches to the Log page; progress is
    shown in the Batch panel and in the table's Stacks/Tomogram columns.
 3. **Cancel** stops after the current tilt (or stops IMOD).
@@ -274,7 +274,7 @@ names are listed in `IMOD\com\directives.csv`.
    Windows notification appears (useful for overnight batches), and the
    Results page opens on the tomogram — or, for several series, the Gallery.
 
-The settings of each run are saved as `pyprep_settings_last_run.json` in the
+The settings of each run are saved as `pytiara_settings_last_run.json` in the
 output folder.
 
 Approximate times on a Quadro M4000 (46-tilt K3 series, 5760 x 4092, 4
@@ -321,7 +321,7 @@ sums of that tilt.
 
 IMOD's automatic positioning fails on some specimens (sparse particles, thin
 films), leaving a fallback thickness. The *Position tomogram* window does the
-same job as etomo's manual *Tomogram positioning* step, without leaving pyPrep:
+same job as etomo's manual *Tomogram positioning* step, without leaving pyTIARA:
 
 1. **Make trial tomogram** (about 15 s) reconstructs the aligned stack at bin 2,
    thicker than the specimen (*Trial thickness*, 600 nm by default).
@@ -350,7 +350,7 @@ for choosing which data to take further. Each thumbnail is the average of the
 older results when the Gallery is opened.
 
 - **Tick the box** next to a thumbnail to *keep* that series. Picks are saved in
-  the output folder (`pyprep_selection.json`).
+  the output folder (`pytiara_selection.json`).
 - **Double-click** a thumbnail to open that series on the Results page.
 - **Size** changes the thumbnail size; **Refresh** rescans the output folder.
 - **Save contact sheet…** writes one PNG with all thumbnails and names (kept
@@ -359,16 +359,16 @@ older results when the Gallery is opened.
 
 ## Log page
 
-Everything pyPrep and IMOD report, including per-tilt drift, timing and any
+Everything pyTIARA and IMOD report, including per-tilt drift, timing and any
 warnings (missing tilts, positioning fallback, EER without a gain reference).
-Each series also keeps its own `<name>_pyprep.log`.
+Each series also keeps its own `<name>_pytiara.log`.
 
 ## Continuing in etomo
 
 - **After reconstruction**: open `<output>\<series>\imod_bin4\<series>.edf` in
   etomo (or press *Open in etomo*). It is a normal etomo project: inspect the
   alignment, fix fiducials, change positioning or thickness, and rerun any step.
-- **Starting etomo yourself** on a pyPrep stack: choose `<series>.mrc` (or
+- **Starting etomo yourself** on a pyTIARA stack: choose `<series>.mrc` (or
   `_bin4.mrc`) as the dataset. The `.rawtlt` and `.mrc.mdoc` next to it give
   etomo the tilt angles, the tilt-axis rotation and, for dose weighting, the dose
   of every tilt (in stack order). Pixel size is in the MRC header.

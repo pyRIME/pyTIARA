@@ -6,12 +6,12 @@ import numpy as np
 import pytest
 import torch
 
-from pyprep import gpu
-from pyprep.dose import critical_exposure_weights
-from pyprep.io import mrc
-from pyprep.io.mdoc import parse_mdoc, format_mdoc
-from pyprep.motion import MotionCorrector, MotionSettings
-from pyprep.tiltseries import load_tilt_series, find_mdocs
+from pytiara import gpu
+from pytiara.dose import critical_exposure_weights
+from pytiara.io import mrc
+from pytiara.io.mdoc import parse_mdoc, format_mdoc
+from pytiara.motion import MotionCorrector, MotionSettings
+from pytiara.tiltseries import load_tilt_series, find_mdocs
 
 from synthetic import make_movie
 
@@ -104,8 +104,8 @@ def test_mdoc_serialem_axis():
 
 def test_mdoc_titles_clipped_for_imod():
     # IMOD cannot read an mdoc whose [T = ...] line is longer than an MRC title (80 characters)
-    from pyprep.io.mdoc import MAX_TITLE_LEN, clip_titles
-    long = "pyPrep 0.1.0: motion-corrected tilt series from Position_31.mdoc  30-Sep-26  18:11:31"
+    from pytiara.io.mdoc import MAX_TITLE_LEN, clip_titles
+    long = "pyTIARA 0.1.0: motion-corrected tilt series from Position_31.mdoc  30-Sep-26  18:11:31"
     doc = parse_mdoc(f"PixelSpacing = 1.6\n[T = {long}]\n[T =     Tilt axis angle = 85.3, binning = 1]\n"
                      "[ZValue = 0]\nTiltAngle = 0\n")
     again = parse_mdoc(format_mdoc(doc))
@@ -157,7 +157,7 @@ def test_axis_masking_defeats_fixed_pattern():
 
 # ---------------------------------------------------------------- reconstruction settings
 def test_directives_patch_and_gold():
-    from pyprep.imod import ReconSettings, build_directives
+    from pytiara.imod import ReconSettings, build_directives
     d = build_directives(13.2, 86.2, 300, ReconSettings())
     assert d["runtime.Fiducials.any.trackingMethod"] == "1"
     assert d["comparam.xcorr_pt.tiltxcorr.SizeOfPatchesXandY"] == "303,303"   # 400 nm at 1.32 nm/px
@@ -173,22 +173,22 @@ def test_directives_patch_and_gold():
 
 def test_recon_dir_mdoc_readable_by_imod(tmp_path):
     # stacks written by earlier versions have over-long titles; the copy for batchruntomo must not
-    from pyprep.imod import prepare_recon_dir
-    from pyprep.io.mdoc import MAX_TITLE_LEN, read_mdoc
+    from pytiara.imod import prepare_recon_dir
+    from pytiara.io.mdoc import MAX_TITLE_LEN, read_mdoc
     stack = tmp_path / "TS_1_bin4.mrc"
     mrc.write_mrc(stack, np.zeros((2, 8, 8), np.float32))
     stack.with_suffix(".rawtlt").write_text("  -1.00\n   1.00\n")
     stack.with_name(stack.name + ".mdoc").write_text(
-        f"ImageFile = {stack.name}\n\n[T = pyPrep 0.1.0: {'x' * 90}]\n\n[ZValue = 0]\nTiltAngle = -1\n")
+        f"ImageFile = {stack.name}\n\n[T = pyTIARA 0.1.0: {'x' * 90}]\n\n[ZValue = 0]\nTiltAngle = -1\n")
     recon = prepare_recon_dir(tmp_path, "TS_1", stack)
     doc = read_mdoc(recon / "TS_1.mrc.mdoc")
     assert recon.name == "imod_bin4" and doc.header["ImageFile"] == "TS_1.mrc"
-    assert all(len(t) <= MAX_TITLE_LEN for t in doc.titles) and doc.is_pyprep
+    assert all(len(t) <= MAX_TITLE_LEN for t in doc.titles) and doc.is_pytiara
 
 
 def test_batchruntomo_failure_lines():
-    # batchruntomo exits 0 when a data set aborts; pyPrep reads the failure from its output
-    from pyprep.imod import batchruntomo_failed
+    # batchruntomo exits 0 when a data set aborts; pyTIARA reads the failure from its output
+    from pytiara.imod import batchruntomo_failed
     assert batchruntomo_failed("ABORT SET: Stack file does not exist: Position_31.mrc")
     assert batchruntomo_failed("Batch run finished; failures occurred for 1 datasets")
     assert not batchruntomo_failed("Batch run finished; no failures occurred")
@@ -196,7 +196,7 @@ def test_batchruntomo_failure_lines():
 
 
 def test_settings_roundtrip_with_recon(tmp_path):
-    from pyprep.settings import ProcessingSettings
+    from pytiara.settings import ProcessingSettings
     s = ProcessingSettings()
     s.recon.enabled, s.recon.preset, s.output.bin_levels = True, "gold", [2]
     s.save(tmp_path / "s.json")
@@ -205,8 +205,8 @@ def test_settings_roundtrip_with_recon(tmp_path):
 
 
 def test_recon_stack_added_to_outputs(tmp_path):
-    from pyprep.pipeline import planned_outputs
-    from pyprep.settings import ProcessingSettings
+    from pytiara.pipeline import planned_outputs
+    from pytiara.settings import ProcessingSettings
     (tmp_path / "TS_1.mdoc").write_text(TOMO5_MDOC)
     ts = load_tilt_series(tmp_path / "TS_1.mdoc")
     s = ProcessingSettings()

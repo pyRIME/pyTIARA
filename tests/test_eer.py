@@ -5,11 +5,11 @@ import numpy as np
 import pytest
 import tifffile
 
-from pyprep.io.eer import EerMovie, split_groups
-from pyprep.io.frames import open_movie
-from pyprep.io.gain import prepare_gain
-from pyprep.settings import InputSettings, ProcessingSettings
-from pyprep.tiltseries import load_tilt_series
+from pytiara.io.eer import EerMovie, split_groups
+from pytiara.io.frames import open_movie
+from pytiara.io.gain import prepare_gain
+from pytiara.settings import InputSettings, ProcessingSettings
+from pytiara.tiltseries import load_tilt_series
 
 from eer_synth import encode_frame, random_frame, write_eer
 from synthetic import specimen
@@ -74,7 +74,7 @@ def test_gain_divide_rotate_expand(tmp_path):
 
 
 def test_doses_for_eer_fractions(tmp_path):
-    from pyprep.tiltseries import Tilt
+    from pytiara.tiltseries import Tilt
     t = Tilt(zvalue=0, angle=0, section=None, exposure_dose=3.0, frame_doses=[0.01] * 300)
     np.testing.assert_allclose(t.doses_for(3, [100, 100, 100]), [1.0, 1.0, 1.0])      # from mdoc frames
     t2 = Tilt(zvalue=0, angle=0, section=None, exposure_dose=3.0)
@@ -104,7 +104,7 @@ def _eer_tilt_series(tmp_path, drift, n_eer=48, shape=(192, 256), rate=0.25, gai
 
 def test_eer_tilt_series_through_pipeline(tmp_path):
     """Drift inside each EER exposure is recovered from the fractions; gain is divided out."""
-    from pyprep.pipeline import process_series
+    from pytiara.pipeline import process_series
 
     yy, xx = np.mgrid[0:192, 0:256]
     gain = (1 + 0.3 * np.sin(2 * np.pi * xx / 90) * np.cos(2 * np.pi * yy / 70)).astype(np.float32)
@@ -129,7 +129,7 @@ def test_eer_tilt_series_through_pipeline(tmp_path):
         total = sh[-1] - sh[0]
         expected = np.array(drift) * (5 / 6)
         np.testing.assert_allclose(total, expected, atol=1.0)
-    from pyprep.io import mrc
+    from pytiara.io import mrc
     h = mrc.read_header(tmp_path / "out" / "TSE" / "TSE.mrc")
     assert (h.nx, h.ny, h.nz) == (256, 192, 3) and h.pixel_size == pytest.approx(2.0)
 

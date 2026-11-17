@@ -4,7 +4,7 @@ import math
 
 import numpy as np
 
-from pyprep import ctf
+from pytiara import ctf
 
 
 def tilt_image(n: int, pixel: float, defocus_um: float, angle: float, axis_deg: float, sign: int = 1,

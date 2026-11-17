@@ -1,7 +1,7 @@
 """Measure whether frame alignment improves the data.
 
 For each tilt, the even-frame and odd-frame half-sums are compared by Fourier
-ring correlation (FRC), once without shifts and once with pyPrep's shifts.
+ring correlation (FRC), once without shifts and once with pyTIARA's shifts.
 Alignment that removes real motion raises the FRC at mid/high frequency.
 
     python scripts/validate_alignment.py <mdoc> [--tilts 10] [--frames-dir DIR]
@@ -15,9 +15,9 @@ import numpy as np
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from pyprep.io.frames import open_movie            # noqa: E402
-from pyprep.motion import MotionCorrector, MotionSettings, FrameLayout   # noqa: E402
-from pyprep.tiltseries import load_tilt_series     # noqa: E402
+from pytiara.io.frames import open_movie            # noqa: E402
+from pytiara.motion import MotionCorrector, MotionSettings, FrameLayout   # noqa: E402
+from pytiara.tiltseries import load_tilt_series     # noqa: E402
 
 
 def frc(a: np.ndarray, b: np.ndarray, nbins: int = 50):

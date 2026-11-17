@@ -1,12 +1,14 @@
 # Output files
 
-For every tilt series, pyPrep writes a folder `<output>\<series>\`:
+For every tilt series, pyTIARA writes a folder `<output>\<series>\`. (Folders
+written before the rename have `pyprep` where the names below have `pytiara`;
+pyTIARA reads both. See [Coming from pyPrep](installation.md#coming-from-pyprep).)
 
 ```
 <output>\
-├── pyprep_settings_last_run.json       settings of the most recent batch
-├── pyprep_selection.json               series ticked "keep" in the Gallery
-├── gallery.png                         contact sheet (Gallery / `pyprep gallery`)
+├── pytiara_settings_last_run.json      settings of the most recent batch
+├── pytiara_selection.json              series ticked "keep" in the Gallery
+├── gallery.png                         contact sheet (Gallery / `pytiara gallery`)
 └── TS_01\
     ├── TS_01.mrc                       aligned sum, full resolution
     ├── TS_01.rawtlt                    tilt angles, one per line, in stack order
@@ -18,8 +20,8 @@ For every tilt series, pyPrep writes a folder `<output>\<series>\`:
     ├── TS_01.defocus                   per-tilt defocus for IMOD (CTF estimation)
     ├── TS_01_ctf.npz                   spectra and fitted CTF models (Results page plot)
     ├── TS_01_motion.csv                per-frame shifts of every tilt
-    ├── TS_01_pyprep.json               full record: settings, per-tilt results, outputs, reconstruction
-    ├── TS_01_pyprep.log                log of alignment and reconstruction
+    ├── TS_01_pytiara.json              full record: settings, per-tilt results, outputs, reconstruction
+    ├── TS_01_pytiara.log               log of alignment and reconstruction
     ├── TS_01_thumb.png                 gallery thumbnail (10 central tomogram slices)
     └── imod_bin4\                      batchruntomo / etomo project (if reconstruction is on)
         ├── TS_01.edf                   open this in etomo
@@ -29,8 +31,8 @@ For every tilt series, pyPrep writes a folder `<output>\<series>\`:
         ├── TS_01_ali_redep.mrc         the cleaned aligned stack it was rebuilt from
         ├── TS_01_redep_transmission.mrc  per-view transmission of the removed dense layers
         ├── TS_01_full_rec.mrc          untrimmed reconstruction
-        ├── pyprep_batchruntomo.adoc    the directives used
-        ├── pyprep_recon.json           reconstruction record
+        ├── pytiara_batchruntomo.adoc   the directives used
+        ├── pytiara_recon.json          reconstruction record
         └── ... the usual etomo files (.com, .log, .xf, .tlt, _ali.mrc, ...)
 ```
 
@@ -73,9 +75,9 @@ Aligned Stack > Filter / mtffilter), select this file as the dose file.
 | `frame` | frame / fraction number |
 | `dx_px`, `dy_px` | shift applied to that frame, in full-resolution (physical) pixels |
 
-## `_pyprep.json`
+## `_pytiara.json`
 
-Everything about the run: pyPrep version, settings, GPU, per-tilt results
+Everything about the run: pyTIARA version, settings, GPU, per-tilt results
 (file, frame count, dose, prior dose, shifts, correlation scores, iterations,
 drift in Å, mean counts, exposure time, saturated-pixel fraction, QC flags and
 reasons), the QC summary (flagged tilts, intensity fit, saturation), the tilts
@@ -96,12 +98,12 @@ and the *skip completed steps* option read it.
 - `<series>_ctf.npz`: for each tilt, the flattened spectrum and the fitted
   model, as plotted on the Results page (numpy arrays `k`, `data`, `model`,
   `angles`, `defocus_um`).
-- The `ctf` entry in `_pyprep.json` holds:
+- The `ctf` entry in `_pytiara.json` holds:
   - per-tilt defocus, fit score and fit resolution;
   - the series defocus (`defocus_um`, used for deconvolution);
   - the handedness and its confidence;
   - the specimen tilt offset (`tilt_offset_deg`).
-- The `image_frame` entry in `_pyprep.json`:
+- The `image_frame` entry in `_pytiara.json`:
   - whether the aligned images were inverted in Y (`invert_y`; Tomography 5
     data by default);
   - the tilt axis of the stacks as written (`tilt_axis`; 180° − the recorded
@@ -109,7 +111,7 @@ and the *skip completed steps* option read it.
   - the reason.
 
   Frame shifts (`shifts_px`, `_motion.csv`) stay in raw-movie coordinates.
-- The `handedness` entry in `_pyprep.json`:
+- The `handedness` entry in `_pytiara.json`:
   - whether the CTF check rotated the tilt axis by 180° (`flipped`);
   - the tilt axis used (`tilt_axis`), the stacks' axis before the check
     (`stack_tilt_axis`), the one recorded in the mdoc, and `invert_y`;
@@ -128,11 +130,11 @@ batchruntomo).
 With CTF correction, `<series>.defocus` is copied in, re-labelled with the
 aligned tilt angles, and used by `ctfcorrection.com`. With deconvolution,
 `<series>_rec_deconv.mrc` is written next to `<series>_rec.mrc` (float32,
-same pixel size); its parameters are in `pyprep_recon.json` under `deconv`.
+same pixel size); its parameters are in `pytiara_recon.json` under `deconv`.
 With redeposition removal, `<series>_rec_redep.mrc` is reconstructed from
 `<series>_ali_redep.mrc` with the project's `tilt.com` and `trimvol`, so it has
 the same geometry as `<series>_rec.mrc`. `<series>_redep_transmission.mrc` holds
-each view's transmission *T* of the removed layers. `pyprep_recon.json` records
+each view's transmission *T* of the removed layers. `pytiara_recon.json` records
 the lamella interior, the layers found (depth, coverage, morphology), the
 projection-geometry calibration and the timing under `redeposition`.
 
@@ -140,8 +142,8 @@ projection-geometry calibration and the timing under `redeposition`.
 
 | File | Contents |
 |---|---|
-| `tilt.com.pyprep_orig` | `tilt.com` as batchruntomo wrote it (*Restore original* copies it back) |
-| `pyprep_pos_ali_bin2.mrc` | aligned stack binned 2×, input for the trial tomogram |
-| `pyprep_pos_trial.mrc` | the thick trial tomogram shown in the positioning window |
+| `tilt.com.pytiara_orig` | `tilt.com` as batchruntomo wrote it (*Restore original* copies it back) |
+| `pytiara_pos_ali_bin2.mrc` | aligned stack binned 2×, input for the trial tomogram |
+| `pytiara_pos_trial.mrc` | the thick trial tomogram shown in the positioning window |
 
-The two `pyprep_pos_*` files can be deleted at any time.
+The two `pytiara_pos_*` files can be deleted at any time.

@@ -1,8 +1,8 @@
-# How pyPrep works
+# How pyTIARA works
 
-pyPrep is written in Python. The numerical work runs on the GPU with PyTorch
+pyTIARA is written in Python. The numerical work runs on the GPU with PyTorch
 (CUDA), or on the CPU with the same code. MRC files, mdoc files and the frame
-alignment are implemented in pyPrep itself. EER decoding uses `imagecodecs`,
+alignment are implemented in pyTIARA itself. EER decoding uses `imagecodecs`,
 and reconstruction uses IMOD.
 
 ```
@@ -31,16 +31,16 @@ and reconstruction uses IMOD.
 - **Image orientation**: Tomography 5 stores its images upside down. IMOD
   reports its own stacks as "inverted in Y" (FEI extended header); the fraction
   files carry no such header but are stored the same way. For Tomo5 series
-  pyPrep reverses the rows of every aligned image and mirrors the recorded axis
+  pyTIARA reverses the rows of every aligned image and mirrors the recorded axis
   with them (*a* → 180° − *a*, since IMOD measures the axis from Y). Stacks, CTF,
   alignment and tomograms are then in the physical orientation and follow
   IMOD's conventions (see *Handedness* below). Frame shifts in `_motion.csv`
-  and `_pyprep.json` stay in the coordinates of the raw movies.
+  and `_pytiara.json` stay in the coordinates of the raw movies.
 - **Fraction files** are matched to tilts by the file name in `SubFramePath`.
   The match is case-insensitive, because Tomo5 writes `Fractions` in the mdoc
   and `fractions` on disk. Tomo5-style acquisition numbers are a fallback.
 - **MRC mode 0**: the MRC2014 standard says signed bytes, but cameras and IMOD
-  treat mode 0 as unsigned. pyPrep follows IMOD: Tomo5's 8-bit K3 fractions
+  treat mode 0 as unsigned. pyTIARA follows IMOD: Tomo5's 8-bit K3 fractions
   have values up to 255.
 - **Dose history**: `PriorRecordDose` when present, otherwise accumulated in
   collection order.
@@ -99,7 +99,7 @@ within about 0.03 px.
 
 ## CTF estimation
 
-`pyprep/ctf.py` was written for pyPrep. It borrows ideas from CTFFIND4 and
+`pytiara/ctf.py` was written for pyTIARA. It borrows ideas from CTFFIND4 and
 IMOD ctfplotter, but no code.
 
 - **Spectra.** Each non-dose-weighted tilt sum is cut into 512-px tiles that
@@ -125,7 +125,7 @@ IMOD ctfplotter, but no code.
 
   *s* = +1 is IMOD's convention: in the aligned stack, with the tilt axis
   vertical, the right side is more underfocused at positive tilt angles.
-  *s* = −1 means the tilt axis is 180° off. By default pyPrep then rotates it
+  *s* = −1 means the tilt axis is 180° off. By default pyTIARA then rotates it
   (see *Handedness* below). With *Keep as recorded* it instead sets
   ctfphaseflip's `InvertTiltAngles`.
 - **Fit resolution.** The tiles' profiles are rescaled in *k* to the central
@@ -134,17 +134,17 @@ IMOD ctfplotter, but no code.
 
 **Validation on the K3 test series** (46 tilts, 3.3 Å/px, target −2 µm):
 
-- IMOD ctfplotter (auto-fit per view, `-invert`) and pyPrep agree to 36 nm RMS
+- IMOD ctfplotter (auto-fit per view, `-invert`) and pyTIARA agree to 36 nm RMS
   (mean difference −10 nm).
 - Without `-invert`, ctfplotter's fits drift with tilt angle and fail on two
-  views. pyPrep chose the inverted handedness in 26 of 26 high tilts. (These
+  views. pyTIARA chose the inverted handedness in 26 of 26 high tilts. (These
   were Tomo5 images as stored, i.e. upside down; see *Handedness*.)
-- pyPrep's specimen tilt offset was −7.6°. tiltalign independently found the
+- pyTIARA's specimen tilt offset was −7.6°. tiltalign independently found the
   same offset between the raw and aligned tilt angles.
 - On synthetic images with a known gradient, defocus is recovered to within
   a few nm and the handedness and offset correctly.
 
-**CTF correction in batchruntomo.** When CTF correction is on, pyPrep:
+**CTF correction in batchruntomo.** When CTF correction is on, pyTIARA:
 
 1. copies `<series>.defocus` into the IMOD project and sets `correctCTF`
    (with `InvertTiltAngles` when the handedness is inverted);
@@ -159,20 +159,20 @@ specimen's hand.
 
 1. *Image orientation.* A tomogram has the hand of the images it is built
    from. Images stored mirrored give a mirror-image tomogram, whatever the
-   tilt geometry. Tomography 5 stores its images upside down, so pyPrep
+   tilt geometry. Tomography 5 stores its images upside down, so pyTIARA
    inverts them in Y (see *Reading the data*; setting *Image orientation*,
-   stored as `image_frame` in `_pyprep.json`).
+   stored as `image_frame` in `_pytiara.json`).
 2. *Tilt-axis direction.* The CTF defocus gradient fixes the direction of
    the tilt axis relative to the images. If it disagrees with the recorded
    axis (at least 80 % of at least 4 tilts beyond 20°), the axis is 180° off.
-   With *Handedness: Automatic*, pyPrep then passes the axis rotated by 180°
+   With *Handedness: Automatic*, pyTIARA then passes the axis rotated by 180°
    to batchruntomo, so `InvertTiltAngles` is not needed. The decision (with
-   its reason) is stored under `handedness` in `_pyprep.json`, and written into
+   its reason) is stored under `handedness` in `_pytiara.json`, and written into
    the stacks' mdoc titles.
 
 The defocus gradient cannot tell the two apart. Images stored mirrored also
 show an inverted gradient, and rotating the axis then makes the gradient
-agree while the tomogram stays a mirror image. Earlier pyPrep versions took
+agree while the tomogram stays a mirror image. Earlier pyTIARA versions took
 every inverted gradient for an axis error. They rotated the axis of Tomo5 data
 (e.g. 86.2° → −93.8° on the K3 test series), and their Tomo5 tomograms are
 mirror images. The point-mirror relation reported for that series (0.95 after
@@ -199,7 +199,7 @@ matches it as-is, CC 0.951 against 0.850 for any mirrored axis order):
 
 ## Deconvolution
 
-`pyprep/deconv.py` applies a Wiener-like filter to the finished tomogram,
+`pytiara/deconv.py` applies a Wiener-like filter to the finished tomogram,
 following the approach Warp introduced for tomograms. The filter is
 *CTF(f) / (CTF(f)² + 1/SNR(f))*, where:
 
@@ -219,12 +219,12 @@ tomogram, the deconvolved copy is re-made with the same parameters.
 
 FIB lamellae carry dense material on their surfaces: redeposited grains and the
 Pt/GIS protective layer. Single-axis tilting smears it through the volume, so
-it casts shading and blotches into the cell. `pyprep/redep.py` (optional; needs
+it casts shading and blotches into the cell. `pytiara/redep.py` (optional; needs
 the ASTRA Toolbox with a CUDA GPU) removes it from the tilt series:
 
 1. A plain WBP of the reconstruction's aligned, phase-flipped stack, about
    730 nm thick, in the projection geometry (no offset, shift or X-axis tilt).
-2. `pyprep/lamella.py` locates the lamella interior from its band-pass texture.
+2. `pytiara/lamella.py` locates the lamella interior from its band-pass texture.
    Beyond each surface, the dense layer's depth, extent and coverage are
    measured in coordinates flattened to the fitted surfaces.
 3. Grain masks: per surface, the grain footprint is segmented in the flattened
@@ -311,7 +311,7 @@ tilt-axis angle from it.
 
 ## Reconstruction (IMOD batchruntomo)
 
-pyPrep copies the binned stack, its `.rawtlt` and its `.mdoc` into
+pyTIARA copies the binned stack, its `.rawtlt` and its `.mdoc` into
 `<series>\imod_bin<N>\`. It writes a directive file from the chosen preset and
 runs IMOD's `batchruntomo.cmd`. The result is a standard etomo project.
 
@@ -336,14 +336,14 @@ and gold erasing using the fiducial model.
 
 Extra directives entered on the Reconstruction page override the preset.
 
-IMOD's scripts run with the `python` that etomo uses. pyPrep removes its own
+IMOD's scripts run with the `python` that etomo uses. pyTIARA removes its own
 environment from the `PATH` it passes to IMOD, so a different Python version
 cannot interfere. The batchruntomo output streams to the log, and cancelling
 stops the whole IMOD process tree.
 
 ## Manual tomogram positioning
 
-This replaces etomo's *tomopitch* step (`pyprep/positioning.py`).
+This replaces etomo's *tomopitch* step (`pytiara/positioning.py`).
 
 **Trial tomogram.** The aligned stack (`<series>_ali.mrc`) is binned 2× on the
 GPU. IMOD `tilt` then reconstructs it with the project's own `tilt.com`
@@ -380,11 +380,11 @@ with IMOD `tilt`. Fitting planes to the reconstructed dots gave the slopes and
 centre. After the correction, the fitted slopes were −0.8° and −0.2° and the
 centre was 0.6 px from the middle.
 
-**Rebuild.** The original `tilt.com` is kept once as `tilt.com.pyprep_orig`.
+**Rebuild.** The original `tilt.com` is kept once as `tilt.com.pytiara_orig`.
 The new parameters are written into `tilt.com`, which stays a valid etomo
 command file. `tilt` is re-run, then the `trimvol` command from batchruntomo's
 `trimvol.com` rotates the volume to Z slices again. Each rebuild is noted under
-`positioning` in `pyprep_recon.json`. A new batchruntomo run (*Redo
+`positioning` in `pytiara_recon.json`. A new batchruntomo run (*Redo
 reconstruction*) removes the backup and the trial files.
 
 ## Responsiveness

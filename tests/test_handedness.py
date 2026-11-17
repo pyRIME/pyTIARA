@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from pyprep.pipeline import handedness_decision, normalize_angle, set_stack_mdoc_axis
+from pytiara.pipeline import handedness_decision, normalize_angle, set_stack_mdoc_axis
 
 
 def test_normalize_angle():
@@ -32,7 +32,7 @@ def test_handedness_decision(mode, ctf, flip):
 
 def test_set_stack_mdoc_axis(tmp_path):
     f = tmp_path / "s.mrc.mdoc"
-    f.write_text("PixelSpacing = 13.2\n\n[T = pyPrep 0.1: motion-corrected tilt series]\n"
+    f.write_text("PixelSpacing = 13.2\n\n[T = pyTIARA 0.1: motion-corrected tilt series]\n"
                  "[T =     Tilt axis angle = 86.20, binning = 4  spot = 6  camera = 0]\n\n"
                  "[ZValue = 0]\nTiltAngle = -44.11\n")
     assert set_stack_mdoc_axis(f, -93.8)
@@ -52,10 +52,10 @@ def test_set_stack_mdoc_axis(tmp_path):
 def test_image_frame(title, mode, inv):
     from pathlib import Path
 
-    from pyprep.io.mdoc import parse_mdoc
-    from pyprep.pipeline import image_frame
-    from pyprep.settings import ProcessingSettings
-    from pyprep.tiltseries import TiltSeries
+    from pytiara.io.mdoc import parse_mdoc
+    from pytiara.pipeline import image_frame
+    from pytiara.settings import ProcessingSettings
+    from pytiara.tiltseries import TiltSeries
 
     doc = parse_mdoc(f"PixelSpacing = 2.62\n[T = {title}]\n[ZValue = 0]\nTiltAngle = -8.02\nRotationAngle = -266.73\n")
     ts = TiltSeries(name="P", mdoc_path=Path("P.mdoc"), mdoc=doc, tilts=[], pixel_size=2.62, voltage=300,
@@ -74,7 +74,7 @@ def _tomo5_series(tmp_path, ny=96, nx=128):
     """Three-tilt Tomo5-style series (Tomography title, RotationAngle 86.2) with synthetic MRC fractions."""
     from synthetic import make_movie
 
-    from pyprep.io import mrc
+    from pytiara.io import mrc
 
     sections = []
     for z, angle in enumerate((-2.0, 0.0, 2.0)):
@@ -92,11 +92,11 @@ def _tomo5_series(tmp_path, ny=96, nx=128):
 def test_tomo5_images_inverted_in_y(tmp_path):
     """Tomo5 series: the aligned images are written with their rows reversed and the stack mdoc carries the
     mirrored axis (180 - a); 'no' writes them as stored. Nothing else changes."""
-    from pyprep.io import mrc
-    from pyprep.io.mdoc import read_mdoc
-    from pyprep.pipeline import process_series
-    from pyprep.settings import ProcessingSettings
-    from pyprep.tiltseries import load_tilt_series
+    from pytiara.io import mrc
+    from pytiara.io.mdoc import read_mdoc
+    from pytiara.pipeline import process_series
+    from pytiara.settings import ProcessingSettings
+    from pytiara.tiltseries import load_tilt_series
 
     ts = load_tilt_series(_tomo5_series(tmp_path))
     got = {}
@@ -124,9 +124,9 @@ def test_tomo5_records_from_before_y_inversion_are_stale(tmp_path):
     SerialEM records without the field stay complete."""
     import json
 
-    from pyprep.pipeline import is_complete, recon_complete, result_json_path
-    from pyprep.settings import ProcessingSettings
-    from pyprep.tiltseries import load_tilt_series
+    from pytiara.pipeline import is_complete, recon_complete, result_json_path
+    from pytiara.settings import ProcessingSettings
+    from pytiara.tiltseries import load_tilt_series
 
     s = ProcessingSettings()
     s.output.bin_levels = [1]
@@ -146,7 +146,7 @@ def test_tomo5_records_from_before_y_inversion_are_stale(tmp_path):
         rec_dir = series_dir / "imod_bin4"
         rec_dir.mkdir()
         (rec_dir / "TS5_rec.mrc").write_bytes(b"x")
-        (rec_dir / "pyprep_recon.json").write_text(json.dumps(
+        (rec_dir / "pytiara_recon.json").write_text(json.dumps(
             {"status": "complete", "preset": "patch", "tomogram": str(rec_dir / "TS5_rec.mrc"),
              "used_tilts": [0, 1, 2]}))
         # stacks rebuilt in the new orientation, tomogram from before: reconstruct again (Tomo5 only)

@@ -2,20 +2,20 @@
 
 Everything the app does is available from a command prompt, for scripting or
 for running on a processing computer without a display. Use the environment's
-Python from the pyPrep folder:
+Python from the pyTIARA folder:
 
 ```bat
-cd path\to\pyPrep
-env\python.exe -m pyprep <command> ...
+cd path\to\pyTIARA
+env\python.exe -m pytiara <command> ...
 ```
 
-## `pyprep scan` — check a session
+## `pytiara scan` — check a session
 
 Lists the tilt series found, their movie format, and any missing fraction files.
 
 ```bat
-env\python.exe -m pyprep scan "D:\Sessions\2026-09-30"
-env\python.exe -m pyprep scan "D:\Sessions\2026-09-30" --frames-dir "\\server\DoseFractions\2026-09-30"
+env\python.exe -m pytiara scan "D:\Sessions\2026-09-30"
+env\python.exe -m pytiara scan "D:\Sessions\2026-09-30" --frames-dir "\\server\DoseFractions\2026-09-30"
 ```
 
 ```
@@ -30,23 +30,23 @@ Position_9_2: 47 tilts (-46.1 to 45.9 deg), 1 missing, pixel 3.300 A, 300 kV, ti
 | `-r`, `--recursive` | also search subfolders |
 | `--frames-dir DIR` | folder with the fraction files, if not next to the `.mdoc` |
 
-## `pyprep run` — process tilt series
+## `pytiara run` — process tilt series
 
 ```bat
 rem everything with defaults: bin 1 + bin 4 stacks, patch-tracking tomogram at bin 4
-env\python.exe -m pyprep run "D:\Sessions\2026-09-30" -o "D:\Sessions\2026-09-30\pyPrep"
+env\python.exe -m pytiara run "D:\Sessions\2026-09-30" -o "D:\Sessions\2026-09-30\pyTIARA"
 
 rem stacks only, int16, with even/odd half-sums for denoising
-env\python.exe -m pyprep run "D:\Sessions\2026-09-30" -o out --no-reconstruct --dtype int16 --even-odd
+env\python.exe -m pytiara run "D:\Sessions\2026-09-30" -o out --no-reconstruct --dtype int16 --even-odd
 
 rem gold-fiducial reconstruction with a fixed 250 nm thickness
-env\python.exe -m pyprep run session -o out --preset gold --fixed-thickness --thickness 250
+env\python.exe -m pytiara run session -o out --preset gold --fixed-thickness --thickness 250
 
 rem Falcon EER with the EPU gain reference, 12 fractions per tilt
-env\python.exe -m pyprep run session -o out --gain "D:\Sessions\x\gain.gain" --eer-fractions 12
+env\python.exe -m pytiara run session -o out --gain "D:\Sessions\x\gain.gain" --eer-fractions 12
 
 rem reuse settings saved from the app (File > Save settings), overriding one option
-env\python.exe -m pyprep run session -o out --settings my_settings.json --force
+env\python.exe -m pytiara run session -o out --settings my_settings.json --force
 ```
 
 Series whose outputs are already complete are skipped (use `--force` to redo).
@@ -130,24 +130,24 @@ The exit code is 0 if every series succeeded, 1 otherwise.
 | `--force` | reprocess series that are already complete |
 | `-q`, `--quiet` | print only progress and a summary per series |
 
-## `pyprep ctf` — (re-)estimate the CTF of processed series
+## `pytiara ctf` — (re-)estimate the CTF of processed series
 
 ```bat
-env\python.exe -m pyprep ctf "D:\Sessions\2026-09-30" -o "D:\Sessions\2026-09-30\pyPrep"
+env\python.exe -m pytiara ctf "D:\Sessions\2026-09-30" -o "D:\Sessions\2026-09-30\pyTIARA"
 ```
 
 Re-estimates the per-tilt defocus from each series' bin 1 aligned stack, with
 the same inputs as `run` and the CTF options above. Use it for series
 processed before CTF estimation existed, or with a different fit range. It
-writes `<series>.defocus` and `_ctf.npz` and updates `_pyprep.json`. To apply
+writes `<series>.defocus` and `_ctf.npz` and updates `_pytiara.json`. To apply
 the result, redo the reconstruction: *Redo reconstruction* on the Results page,
 or `run --force`.
 
-## `pyprep deconv` — deconvolve any tomogram
+## `pytiara deconv` — deconvolve any tomogram
 
 ```bat
-env\python.exe -m pyprep deconv "out\TS_01\imod_bin4\TS_01_rec.mrc" --defocus 2.5
-env\python.exe -m pyprep deconv tomo.mrc --defocus 3.1 --pixel 10.2 --strength 0.8 --phase-flipped
+env\python.exe -m pytiara deconv "out\TS_01\imod_bin4\TS_01_rec.mrc" --defocus 2.5
+env\python.exe -m pytiara deconv tomo.mrc --defocus 3.1 --pixel 10.2 --strength 0.8 --phase-flipped
 ```
 
 Writes `<input>_deconv.mrc` (or `-o FILE`). The pixel size is read from the
@@ -155,34 +155,34 @@ MRC header unless `--pixel` is given. `--kv`, `--cs`, `--amp-contrast`,
 `--strength`, `--falloff` and `--highpass` (fraction of Nyquist) set the
 filter. `--phase-flipped` tells it the tilt series was CTF-corrected.
 
-## `pyprep redep` — remove redeposition in a reconstruction folder
+## `pytiara redep` — remove redeposition in a reconstruction folder
 
 ```bat
-env\python.exe -m pyprep redep "out\TS_01\imod_bin4"
+env\python.exe -m pytiara redep "out\TS_01\imod_bin4"
 ```
 
 Runs redeposition removal (see [How it works](how-it-works.md#redeposition-removal))
 on an existing reconstruction: it writes `<series>_ali_redep.mrc`,
 `<series>_redep_transmission.mrc` and `<series>_rec_redep.mrc` and records them in
-`pyprep_recon.json`, as `run --remove-redeposition` does. The root name comes
+`pytiara_recon.json`, as `run --remove-redeposition` does. The root name comes
 from the folder's `.edf`; `--root NAME` sets it. Needs the ASTRA Toolbox and a
 CUDA GPU.
 
-## `pyprep gallery` — thumbnails and contact sheet
+## `pytiara gallery` — thumbnails and contact sheet
 
 ```bat
-env\python.exe -m pyprep gallery "D:\Sessions\2026-09-30\pyPrep"
+env\python.exe -m pytiara gallery "D:\Sessions\2026-09-30\pyTIARA"
 ```
 
 Makes any missing thumbnails (average of the 10 central tomogram slices) and
 writes `gallery.png`, a grid of all series with their names, in the output
 folder. `--sheet FILE` chooses another file, `--tile N` the thumbnail size.
 
-## `pyprep export` — TIFF for Fiji / segmentation
+## `pytiara export` — TIFF for Fiji / segmentation
 
 ```bat
-env\python.exe -m pyprep export "out\TS_01\imod_bin4\TS_01_rec.mrc" TS_01_rec.tif
-env\python.exe -m pyprep export stack.mrc stack.tif --bin 2 --bits16
+env\python.exe -m pytiara export "out\TS_01\imod_bin4\TS_01_rec.mrc" TS_01_rec.tif
+env\python.exe -m pytiara export stack.mrc stack.tif --bin 2 --bits16
 ```
 
 Writes an ImageJ TIFF scaled between the 0.5 and 99.5 percentiles, with the
@@ -259,7 +259,7 @@ batchruntomo `key = value` lines separated by newlines (`\n`).
 
 `scripts\validate_alignment.py` measures whether frame alignment improves a
 dataset: it compares the Fourier ring correlation between even- and odd-frame
-half-sums without and with pyPrep's shifts, for a sample of tilts.
+half-sums without and with pyTIARA's shifts, for a sample of tilts.
 
 ```bat
 env\python.exe scripts\validate_alignment.py "D:\Sessions\x\TS_01.mdoc" --tilts 8

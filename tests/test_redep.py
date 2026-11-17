@@ -4,7 +4,7 @@ and a CUDA GPU) its projector and constrained SIRT."""
 import numpy as np
 import pytest
 
-from pyprep import redep
+from pytiara import redep
 from test_gui_threads import _child
 
 ASTRA_OK = redep.astra_status()[0]
@@ -36,10 +36,10 @@ def test_astra_status_is_reported():
 OPTION = r'''
 import sys
 from PySide6.QtWidgets import QApplication
-from pyprep import redep
+from pytiara import redep
 available = sys.argv[1] == "yes"
 redep.astra_status = lambda: (available, "ASTRA test (CUDA)" if available else "ASTRA Toolbox not installed")
-from pyprep.gui.settings_panel import SettingsForms
+from pytiara.gui.settings_panel import SettingsForms
 app = QApplication([])
 forms = SettingsForms()
 s = forms.get_settings()

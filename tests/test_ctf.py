@@ -7,8 +7,8 @@ import pytest
 import torch
 
 from ctf_synth import tilt_image
-from pyprep import ctf, deconv, imod
-from pyprep.settings import ProcessingSettings
+from pytiara import ctf, deconv, imod
+from pytiara.settings import ProcessingSettings
 
 
 def test_wavelength_and_first_zero():

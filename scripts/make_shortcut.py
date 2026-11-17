@@ -1,4 +1,4 @@
-"""Create pyPrep shortcuts on the Desktop and in the Start menu (Windows).
+"""Create pyTIARA shortcuts on the Desktop and in the Start menu (Windows).
 
 Run by install.bat; can be re-run any time:   env\\python.exe scripts\\make_shortcut.py
 """
@@ -24,11 +24,11 @@ def folder(name: str) -> Path:
 
 def make_shortcut(lnk: Path) -> None:
     pythonw = ROOT / "env" / "pythonw.exe"
-    icon = ROOT / "pyprep" / "gui" / "pyprep.ico"
+    icon = ROOT / "pytiara" / "gui" / "logo" / "pytiara.ico"
     script = (f"$s = (New-Object -ComObject WScript.Shell).CreateShortcut({_ps_quote(lnk)}); "
-              f"$s.TargetPath = {_ps_quote(pythonw)}; $s.Arguments = '-m pyprep.gui.launcher'; "
+              f"$s.TargetPath = {_ps_quote(pythonw)}; $s.Arguments = '-m pytiara.gui.launcher'; "
               f"$s.WorkingDirectory = {_ps_quote(ROOT)}; $s.IconLocation = {_ps_quote(str(icon) + ',0')}; "
-              f"$s.Description = 'pyPrep - cryo-ET tilt-series preparation'; $s.Save()")
+              f"$s.Description = 'pyTIARA - cryo-ET tilt-series preparation'; $s.Save()")
     subprocess.run(["powershell", "-NoProfile", "-Command", script], check=True)
 
 
@@ -39,9 +39,10 @@ def main() -> int:
     made = []
     for where in ("Desktop", "Programs"):
         try:
-            target = folder(where) / "pyPrep.lnk"
+            target = folder(where) / "pyTIARA.lnk"
             make_shortcut(target)
             made.append(str(target))
+            target.with_name("pyPrep.lnk").unlink(missing_ok=True)    # the shortcut from before the rename
         except (subprocess.CalledProcessError, OSError) as e:
             print(f"Could not create the {where} shortcut: {e}")
     for m in made:

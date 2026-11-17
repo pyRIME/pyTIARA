@@ -1,4 +1,4 @@
-"""Write synthetic EER movies for tests (pyPrep only reads EER; this is the test-side encoder).
+"""Write synthetic EER movies for tests (pyTIARA only reads EER; this is the test-side encoder).
 
 Bitstream (LSB-first): per electron, the number of empty pixels to skip
 (``skipbits`` wide; the all-ones value means "skip that many, no electron") then

@@ -7,8 +7,8 @@ from pathlib import PureWindowsPath
 import numpy as np
 import pytest
 
-from pyprep import imod, positioning as P
-from pyprep.io import mrc
+from pytiara import imod, positioning as P
+from pytiara.io import mrc
 
 needs_imod = pytest.mark.skipif(sys.platform != "win32" or imod.imod_dir() is None,
                                 reason="needs IMOD for Windows")
@@ -111,13 +111,13 @@ def test_apply_positioning_writes_tiltcom(tmp_path, monkeypatch):
     geom = P.apply_positioning(tmp_path, "TS", corr, margin_px=10, log=lambda s: None)
     assert calls == ["tilt", "trimvol"]
     assert geom == {"OFFSET": [1.5, 0.0], "XAXISTILT": -2.06, "SHIFT": [0.0, -7.3], "THICKNESS": 120}
-    assert (tmp_path / "tilt.com.pyprep_orig").read_text() == TILT_COM
+    assert (tmp_path / "tilt.com.pytiara_orig").read_text() == TILT_COM
     tc = P.TiltCom.read(tmp_path / "tilt.com")
     assert tc.get("THICKNESS") == "120" and tc.floats("XAXISTILT", 1) == [-2.06]
     # A second pass adds to the current values but keeps the first backup.
     P.apply_positioning(tmp_path, "TS", P.Correction(0.5, 0.0, 0.0, 100), margin_px=0, log=lambda s: None)
     assert P.TiltCom.read(tmp_path / "tilt.com").floats("OFFSET", 1) == [2.0]
-    assert (tmp_path / "tilt.com.pyprep_orig").read_text() == TILT_COM
+    assert (tmp_path / "tilt.com.pytiara_orig").read_text() == TILT_COM
     P.restore_original(tmp_path, log=lambda s: None)
     assert (tmp_path / "tilt.com").read_text() == TILT_COM
 

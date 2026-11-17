@@ -3,7 +3,7 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "pyprep"
+name = "pytiara"
 version = "0.1.0"
 description = "Cryo-ET tilt-series preparation: GPU frame alignment and etomo-ready stacks, for Windows"
 requires-python = ">=3.11"
@@ -25,13 +25,16 @@ test = ["pytest"]
 redep = ["astra-toolbox"]   # redeposition removal (ASTRA Toolbox: GPLv3, needs a CUDA GPU)
 
 [project.scripts]
-pyprep = "pyprep.cli:main"
+pytiara = "pytiara.cli:main"
 
 [project.gui-scripts]
-pyprep-gui = "pyprep.gui.launcher:main"
+pytiara-gui = "pytiara.gui.launcher:main"
 
 [tool.setuptools.packages.find]
-include = ["pyprep*"]
+include = ["pytiara*"]
+
+[tool.setuptools.package-data]
+"pytiara.gui" = ["logo/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

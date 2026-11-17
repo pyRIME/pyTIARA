@@ -18,6 +18,6 @@ output/
 *.st
 *.rec
 
-# Reference material supplied with the project (not part of pyPrep)
+# Reference material supplied with the project (not part of pyTIARA)
 Useful scripts/
 output_e2e/

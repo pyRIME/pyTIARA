@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from scipy import ndimage
 
-from pyprep import lamella
+from pytiara import lamella
 
 APIX = 10.48
 

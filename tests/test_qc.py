@@ -6,9 +6,9 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from pyprep import qc
-from pyprep.io import mrc
-from pyprep.settings import ProcessingSettings
+from pytiara import qc
+from pytiara.io import mrc
+from pytiara.settings import ProcessingSettings
 
 ANGLES = np.arange(-60, 61, 3.0)
 
@@ -53,8 +53,8 @@ def test_saturation_value():
 
 
 def test_exclusion_makes_stacks_and_tomogram_stale(tmp_path):
-    from pyprep.pipeline import is_complete, recon_complete, result_json_path
-    from pyprep.tiltseries import load_tilt_series
+    from pytiara.pipeline import is_complete, recon_complete, result_json_path
+    from pytiara.tiltseries import load_tilt_series
     from test_core import TOMO5_MDOC
 
     (tmp_path / "TS_1.mdoc").write_text(TOMO5_MDOC)
@@ -74,7 +74,7 @@ def test_exclusion_makes_stacks_and_tomogram_stale(tmp_path):
     recon_dir = series_dir / "imod_bin4"
     recon_dir.mkdir()
     (recon_dir / "TS_1_rec.mrc").write_bytes(b"x")
-    (recon_dir / "pyprep_recon.json").write_text(json.dumps(
+    (recon_dir / "pytiara_recon.json").write_text(json.dumps(
         {"status": "complete", "preset": "patch", "tomogram": str(recon_dir / "TS_1_rec.mrc"), "used_tilts": [0, 1, 2],
          "invert_y": True}))
     s.recon.enabled = False
@@ -89,7 +89,7 @@ def test_exclusion_makes_stacks_and_tomogram_stale(tmp_path):
 
 
 def test_presets_roundtrip(tmp_path, monkeypatch):
-    from pyprep import settings as st
+    from pytiara import settings as st
     monkeypatch.setenv("APPDATA", str(tmp_path))
     names = st.list_presets()                         # built-ins created on first use
     assert any("Tomo5" in n for n in names) and any("EER" in n for n in names)
@@ -104,7 +104,7 @@ def test_presets_roundtrip(tmp_path, monkeypatch):
 
 def test_export_tiff_scale_and_range(tmp_path):
     import tifffile
-    from pyprep.export import export_tiff
+    from pytiara.export import export_tiff
     vol = np.random.default_rng(0).normal(size=(5, 40, 60)).astype(np.float32)
     mrc.write_mrc(tmp_path / "v.mrc", vol, pixel_size=13.2)
     out = export_tiff(tmp_path / "v.mrc", tmp_path / "v.tif", bin_factor=2)
@@ -116,8 +116,8 @@ def test_export_tiff_scale_and_range(tmp_path):
 
 
 def test_estimate_output_bytes(tmp_path):
-    from pyprep.pipeline import estimate_output_bytes
-    from pyprep.tiltseries import load_tilt_series
+    from pytiara.pipeline import estimate_output_bytes
+    from pytiara.tiltseries import load_tilt_series
     from test_core import TOMO5_MDOC
     (tmp_path / "TS_1.mdoc").write_text(TOMO5_MDOC)
     mrc.write_mrc(tmp_path / "TS_1_001_-0.10_20250113_171527_fractions.mrc", np.zeros((4, 48, 64), np.uint8))
@@ -130,7 +130,7 @@ def test_estimate_output_bytes(tmp_path):
 
 def test_thumbnails_gallery_and_selection(tmp_path):
     import zlib
-    from pyprep.thumbs import gallery_entries, load_selection, save_selection, tomogram_thumbnail, write_png_gray
+    from pytiara.thumbs import gallery_entries, load_selection, save_selection, tomogram_thumbnail, write_png_gray
     # PNG writer produces a valid, decodable image
     img = (np.arange(12 * 20) % 256).astype(np.uint8).reshape(12, 20)
     write_png_gray(tmp_path / "a.png", img)
@@ -149,7 +149,7 @@ def test_thumbnails_gallery_and_selection(tmp_path):
     d = tmp_path / "out" / "TS_1"
     (d / "imod_bin4").mkdir(parents=True)
     mrc.write_mrc(d / "imod_bin4" / "TS_1_rec.mrc", vol)
-    (d / "TS_1_pyprep.json").write_text(json.dumps({"series": "TS_1", "status": "complete", "tilts": [],
+    (d / "TS_1_pytiara.json").write_text(json.dumps({"series": "TS_1", "status": "complete", "tilts": [],
                                                      "reconstruction": {"status": "complete",
                                                                         "tomogram": str(d / "imod_bin4" / "TS_1_rec.mrc")}}))
     entries = gallery_entries(tmp_path / "out")

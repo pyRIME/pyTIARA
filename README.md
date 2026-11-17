@@ -1,15 +1,23 @@
-# pyPrep
+<p align="center"><img src="pytiara/gui/logo/pytiara_logo_on_light.png" alt="pyTIARA" height="110"></p>
 
-**Cryo-ET tilt-series preparation for Windows.** pyPrep aligns the dose
+# pyTIARA
+
+**TIlt-series Alignment and Reconstruction, Automated: cryo-ET tilt-series
+preparation for Windows.** pyTIARA aligns the dose
 fractions of every tilt on the GPU, builds etomo-ready tilt-series stacks, and
 reconstructs tomograms automatically with IMOD. It processes a whole session at
 once, from a desktop app or from the command line.
 
-![pyPrep](docs/images/tilt_series.png)
+![pyTIARA](docs/images/tilt_series.png)
+
+> **pyTIARA was called pyPrep until November 2026.** The name changed because
+> `pyprep` is an unrelated EEG package. Output folders written by pyPrep still
+> open, and old links to the repository redirect here. See
+> [Coming from pyPrep](docs/installation.md#coming-from-pyprep).
 
 ## What it does
 
-For every tilt series in a session folder, pyPrep:
+For every tilt series in a session folder, pyTIARA:
 
 1. **Reads the `.mdoc`** written by Thermo Fisher **Tomo5** or **SerialEM**,
    and finds each tilt's movie file. These can be MRC fractions (for example
@@ -25,12 +33,12 @@ For every tilt series in a session folder, pyPrep:
    You can choose patch tracking or gold fiducials. The result is a normal
    etomo project that you can open and refine.
 
-pyPrep flags problem tilts (dark or blocked, drifting, poorly aligned) before
+pyTIARA flags problem tilts (dark or blocked, drifting, poorly aligned) before
 and after processing, warns about saturated fraction files, resumes interrupted
 batches, and skips missing tilts. Its viewer shows the stacks, tomograms and
 per-tilt drift and QC plots, and exports TIFF for Fiji. A **Gallery** shows a
 thumbnail of every tomogram in the session, with its name, to pick the best data
-to take further. pyPrep measures the **defocus of every tilt** on the GPU (tilt-aware, with
+to take further. pyTIARA measures the **defocus of every tilt** on the GPU (tilt-aware, with
 automatic handedness), phase-flips the stack in IMOD with it, and writes a
 **deconvolved tomogram** with stronger contrast for viewing and segmentation.
 With the optional ASTRA Toolbox it also writes a tomogram with the **redeposition
@@ -40,7 +48,7 @@ Tomograms have the specimen's **handedness** by default: Tomography 5 images,
 which are stored upside down, are inverted in Y, and the defocus gradient
 checks the direction of the tilt axis.
 When IMOD's automatic positioning fails, **Position tomogram**
-lets you mark the top and bottom of the specimen. pyPrep then rebuilds the
+lets you mark the top and bottom of the specimen. pyTIARA then rebuilds the
 tomogram flat, centred and at the right thickness.
 
 ## Quick start
@@ -48,10 +56,10 @@ tomogram flat, centred and at the right thickness.
 1. Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html). For
    reconstruction, also install
    [IMOD for Windows](https://bio3d.colorado.edu/imod/).
-2. Download pyPrep, either with
-   `git clone https://github.com/EvanKrystofiak/pyPrep.git` or with
+2. Download pyTIARA, either with
+   `git clone https://github.com/pyRIME/pyTIARA.git` or with
    **Code > Download ZIP**. Then double-click **`install.bat`**.
-3. Double-click **`pyPrep.bat`**.
+3. Double-click **`pyTIARA.bat`**.
 4. Choose the **Session** folder (the one with the `.mdoc` files) and an
    **Output** folder. Click **Find tilt series**, then **Start**.
 
@@ -65,7 +73,7 @@ Each tilt series ends up in `<Output>\<series>\`:
 | `imod_bin4\<series>_rec_deconv.mrc` | deconvolved tomogram, for viewing and segmentation |
 | `imod_bin4\<series>_rec_redep.mrc` | tomogram with the redeposition removed (optional, needs ASTRA) |
 | `<series>.defocus` | per-tilt defocus (IMOD format) |
-| `_motion.csv`, `_pyprep.json`, `_pyprep.log` | frame shifts, full record of the run, log |
+| `_motion.csv`, `_pytiara.json`, `_pytiara.log` | frame shifts, full record of the run, log |
 
 ## Documentation
 
@@ -73,7 +81,7 @@ Each tilt series ends up in `<Output>\<series>\`:
 |---|---|
 | [Installation](docs/installation.md) | requirements, installer options (GPU/CUDA builds), IMOD, updating |
 | [User guide](docs/user-guide.md) | every page and setting of the app, running a batch, continuing in etomo |
-| [Command line](docs/command-line.md) | `pyprep scan`, `run`, `ctf`, `deconv`, `gallery`, `export`, the settings file |
+| [Command line](docs/command-line.md) | `pytiara scan`, `run`, `ctf`, `deconv`, `gallery`, `export`, the settings file |
 | [Output files](docs/outputs.md) | what each file contains |
 | [How it works](docs/how-it-works.md) | algorithms, validation, references |
 | [Troubleshooting](docs/troubleshooting.md) | GPU, missing tilts, gain references, IMOD |
@@ -111,39 +119,39 @@ CTF estimation adds about 15 s, and the bin-4 batchruntomo reconstruction about
 
 ```bat
 env\python.exe -m pytest          # unit tests, on synthetic data
-env\python.exe -m pyprep --help   # command line
+env\python.exe -m pytiara --help   # command line
 ```
 
 The code is organised as follows:
 
-- `pyprep/io`: MRC, mdoc, EER and gain-reference files
-- `pyprep/motion.py`: frame alignment
-- `pyprep/ctf.py`, `pyprep/deconv.py`: CTF estimation, tomogram deconvolution
-- `pyprep/positioning.py`: interactive tomogram positioning
-- `pyprep/redep.py`, `pyprep/lamella.py`: redeposition removal, and the lamella locator it uses
-- `pyprep/pipeline.py`: processing a tilt series
-- `pyprep/imod.py`: running batchruntomo
-- `pyprep/gui`: the PySide6 app
+- `pytiara/io`: MRC, mdoc, EER and gain-reference files
+- `pytiara/motion.py`: frame alignment
+- `pytiara/ctf.py`, `pytiara/deconv.py`: CTF estimation, tomogram deconvolution
+- `pytiara/positioning.py`: interactive tomogram positioning
+- `pytiara/redep.py`, `pytiara/lamella.py`: redeposition removal, and the lamella locator it uses
+- `pytiara/pipeline.py`: processing a tilt series
+- `pytiara/imod.py`: running batchruntomo
+- `pytiara/gui`: the PySide6 app
 
 See [How it works](docs/how-it-works.md) for details.
 
 ## License and citation
 
-pyPrep is released under the [BSD 3-Clause License](LICENSE). You may use,
+pyTIARA is released under the [BSD 3-Clause License](LICENSE). You may use,
 modify and redistribute it, including commercially, provided you keep the
 copyright notice and do not use the author's name to promote derived products.
 
 Redeposition removal uses the [ASTRA Toolbox](https://astra-toolbox.com), an
-optional dependency under the GPLv3 that pyPrep does not include. Install it with
+optional dependency under the GPLv3 that pyTIARA does not include. Install it with
 `pip install astra-toolbox` (or `pip install -e ".[redep]"`). A redistributed
-bundle of pyPrep together with ASTRA falls under the GPLv3's terms.
+bundle of pyTIARA together with ASTRA falls under the GPLv3's terms.
 
-To cite pyPrep, use **Cite this repository** on the GitHub page (from
+To cite pyTIARA, use **Cite this repository** on the GitHub page (from
 [`CITATION.cff`](CITATION.cff)).
 
 ## Acknowledgements
 
-pyPrep builds on ideas from MotionCor2/3 (frame alignment).
+pyTIARA builds on ideas from MotionCor2/3 (frame alignment).
 
 - [IMOD](https://bio3d.colorado.edu/imod/) for tilt-series alignment and
   reconstruction;
@@ -154,5 +162,5 @@ pyPrep builds on ideas from MotionCor2/3 (frame alignment).
   [tifffile](https://github.com/cgohlke/tifffile) for EER decoding.
 
 References for the methods are listed in
-[How it works](docs/how-it-works.md#references). If you use pyPrep, please cite
+[How it works](docs/how-it-works.md#references). If you use pyTIARA, please cite
 IMOD and the methods it implements.

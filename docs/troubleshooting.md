@@ -1,20 +1,20 @@
 # Troubleshooting
 
-## pyPrep does not start
+## pyTIARA does not start
 
-- **Nothing happens when I double-click `pyPrep.bat`**: a splash screen should
+- **Nothing happens when I double-click `pyTIARA.bat`**: a splash screen should
   appear within a few seconds. If it never does, run from a command prompt to
   see errors:
   ```bat
-  env\python.exe -m pyprep.gui.launcher
+  env\python.exe -m pytiara.gui.launcher
   ```
-- **"pyPrep could not start"** message: the details are in
-  `%LOCALAPPDATA%\pyPrep\startup_error.log`.
-- **pyPrep closes suddenly, without a message**: the Python stack of every
-  thread at the moment of the crash is in `%LOCALAPPDATA%\pyPrep\crash.log`
-  (the last block, after the latest "pyPrep ... started" line). Include it
+- **"pyTIARA could not start"** message: the details are in
+  `%LOCALAPPDATA%\pyTIARA\startup_error.log`.
+- **pyTIARA closes suddenly, without a message**: the Python stack of every
+  thread at the moment of the crash is in `%LOCALAPPDATA%\pyTIARA\crash.log`
+  (the last block, after the latest "pyTIARA ... started" line). Include it
   when reporting the problem.
-- **"pyPrep is not installed yet"**: run `install.bat` first
+- **"pyTIARA is not installed yet"**: run `install.bat` first
   ([Installation](installation.md)).
 - **Slow first start (~30 s)**: Python loads PyTorch and Qt from disk; later
   starts are faster. The splash screen shows progress.
@@ -33,11 +33,11 @@ The install check or the status bar says no GPU / CPU mode.
    A version ending in `+cpu` means the CPU-only PyTorch was installed — rerun
    `install.bat` (it installs the CUDA build first).
 
-pyPrep still works on the CPU, only more slowly.
+pyTIARA still works on the CPU, only more slowly.
 
 ## "Not Responding" / the window seems frozen
 
-pyPrep keeps the window responsive during processing and loading. If Windows
+pyTIARA keeps the window responsive during processing and loading. If Windows
 reports it as not responding, it is usually because the computer is out of
 memory (full-resolution stacks of large detectors need several GB) or a disk
 is very slow. Check the Log page and Windows Task Manager. Processing itself
@@ -51,14 +51,14 @@ The Tilt series page shows tilts as `missing` when the file named in the mdoc's
 
 - Set the **Fractions folder** to where the fraction files are (e.g. the
   `DoseFractions` share), or copy them next to the `.mdoc`.
-- `pyprep scan <folder>` lists the missing files by name.
+- `pytiara scan <folder>` lists the missing files by name.
 - Missing tilts are simply left out of the stack; the `.rawtlt` and `.mdoc`
   match the tilts that were used.
 
 ## "gain reference ... does not match frames"
 
 The gain reference has a different size or orientation from the frames.
-If pyPrep says it *looks transposed*, set the gain rotation to 90° (or 270°)
+If pyTIARA says it *looks transposed*, set the gain rotation to 90° (or 270°)
 on the Frame alignment page. Use **Test on one tilt**: with the right
 orientation the aligned image shows no detector pattern.
 
@@ -95,7 +95,7 @@ larger fractions.
 
 - **"IMOD not found"**: install IMOD for Windows and make sure `IMOD_DIR` is
   set (the IMOD installer does this; log out and in again afterwards). The
-  Reconstruction page shows what pyPrep found.
+  Reconstruction page shows what pyTIARA found.
 - **"no python on PATH"**: IMOD's scripts need Python; install it as described
   in IMOD's installation instructions and check that `etomo` runs.
 - **"Tomogram positioning did not work; proceeding if possible"**: IMOD could
@@ -108,8 +108,8 @@ larger fractions.
 - **Positioning window: the specimen is not visible or fills the whole view**:
   make a new trial with a larger *Trial thickness*.
 - **Reconstruction failed**: the IMOD messages are in the Log page and in
-  `<series>_pyprep.log`; the directives used are in
-  `imod_bin<N>\pyprep_batchruntomo.adoc`. Open the project in etomo to see which
+  `<series>_pytiara.log`; the directives used are in
+  `imod_bin<N>\pytiara_batchruntomo.adoc`. Open the project in etomo to see which
   step failed and continue from there.
 - **Poor alignment with patch tracking**: try different patch sizes (Advanced
   directives or the patch size setting), or the gold preset if the sample has
@@ -119,16 +119,16 @@ larger fractions.
 
 - **"CTF not estimated - it needs the bin 1 aligned stack"**: this series was
   processed before CTF estimation existed, without a bin 1 stack. Tick bin 1
-  and re-run it (the stacks are redone), or run `pyprep ctf` once a bin 1 stack
+  and re-run it (the stacks are redone), or run `pytiara ctf` once a bin 1 stack
   exists.
 - **Defocus per tilt looks noisy or has red points**: check those tilts'
   *CTF fit* plot. Thick ice, drift and contamination weaken the rings. The fit
   range can be narrowed (for example 30 to 12 Å) on the Frame alignment page.
 - **"direction of the defocus gradient is uncertain"**: the series has few
-  tilts beyond 20° or weak rings. pyPrep then uses the majority vote, and CTF
+  tilts beyond 20° or weak rings. pyTIARA then uses the majority vote, and CTF
   correction at bin 4 is barely affected by it.
 - **Tomo5 tomograms look upside down (flipped in Y) compared with older
-  ones**: pyPrep now inverts Tomography 5 images in Y (Frame alignment page,
+  ones**: pyTIARA now inverts Tomography 5 images in Y (Frame alignment page,
   *Image orientation*), and the older tomograms were mirror images of the
   specimen (*How it works*, *Handedness*). Re-running rebuilds older Tomo5
   stacks and tomograms automatically. *As stored* (or `--invert-y no`) gives
@@ -154,6 +154,6 @@ option, or use `--force` on the command line to redo them.
 
 ## Reporting a problem
 
-Please include the series' `<name>_pyprep.log` and `<name>_pyprep.json`, the
-pyPrep version (Help > About), and what you expected. Open an issue at
-<https://github.com/EvanKrystofiak/pyPrep/issues>.
+Please include the series' `<name>_pytiara.log` and `<name>_pytiara.json`, the
+pyTIARA version (Help > About), and what you expected. Open an issue at
+<https://github.com/pyRIME/pyTIARA/issues>.

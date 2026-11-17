@@ -19,8 +19,8 @@ import sys, threading, time
 from pathlib import Path
 from PySide6.QtCore import QCoreApplication, QEvent, Qt, QTimer
 from PySide6.QtWidgets import QApplication, QMainWindow
-from pyprep import positioning as P
-from pyprep.gui import positioning_dialog as D
+from pytiara import positioning as P
+from pytiara.gui import positioning_dialog as D
 
 def slow_apply(recon_dir, root, corr, margin_px, log=print, cancel=None):
     for i in range(2000):                       # IMOD tilt/trimvol output, queued to the dialog
@@ -86,7 +86,7 @@ def test_positioning_dialog_survives_close_during_apply(tmp_path):
 
 
 def test_crash_log_records_python_stack(tmp_path):
-    code = ("from pyprep.gui import launcher\n"
+    code = ("from pytiara.gui import launcher\n"
             "print(launcher.enable_crash_log(), flush=True)\n"
             "import faulthandler\n"
             "def rebuild_tomogram():\n"
@@ -94,6 +94,6 @@ def test_crash_log_records_python_stack(tmp_path):
             "rebuild_tomogram()\n")
     r = _child(code, env={"LOCALAPPDATA": str(tmp_path)}, timeout=120)
     assert r.returncode != 0                    # the child really crashed
-    log = (tmp_path / "pyPrep" / "crash.log").read_text(encoding="utf-8", errors="replace")
-    assert "pyPrep" in log and "started" in log
+    log = (tmp_path / "pyTIARA" / "crash.log").read_text(encoding="utf-8", errors="replace")
+    assert "pyTIARA" in log and "started" in log
     assert "rebuild_tomogram" in log            # the Python stack of the crashing thread
